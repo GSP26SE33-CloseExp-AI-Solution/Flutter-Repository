@@ -117,3 +117,22 @@ app.*.symbols
 !**/ios/**/default.perspectivev3
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
 !/dev/ci/**/Gemfile.lock
+
+# Security & Environment
+.env*
+*.pem
+*.key
+
+# Firebase (Optional: uncomment if you want to hide project IDs)
+# **/android/app/google-services.json
+# **/ios/Runner/GoogleService-Info.plist
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.scratch
+
+# OS specific
+.DS_Store
+Thumbs.db
