@@ -5,36 +5,6 @@ import 'core/router/app_router.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'injection_container.dart';
 
-/// Main entry point for CloseExp Delivery Staff App
-///
-/// Architecture: Clean Architecture with BLoC Pattern
-///
-/// Resources to learn more:
-/// - Clean Architecture: https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html
-/// - Flutter Clean Architecture: https://resocoder.com/flutter-clean-architecture-tdd/
-/// - BLoC Pattern: https://bloclibrary.dev/
-/// - GetIt (DI): https://pub.dev/packages/get_it
-///
-/// Project Structure:
-/// lib/
-/// ├── core/                    # Core utilities (network, error handling, constants)
-/// │   ├── constants/           # API and app constants
-/// │   ├── error/               # Failures and exceptions
-/// │   ├── network/             # Dio client and network info
-/// │   ├── router/              # App routing configuration
-/// │   └── usecases/            # Base use case class
-/// │
-/// ├── features/                # Feature modules
-/// │   ├── auth/                # Authentication feature
-/// │   │   ├── data/            # Data layer (models, data sources, repositories impl)
-/// │   │   ├── domain/          # Domain layer (entities, repositories, use cases)
-/// │   │   └── presentation/    # Presentation layer (BLoC, pages, widgets)
-/// │   │
-/// │   └── home/                # Home feature (placeholder for delivery features)
-/// │       └── presentation/
-/// │
-/// ├── injection_container.dart # Dependency injection setup
-/// └── main.dart                # App entry point
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 

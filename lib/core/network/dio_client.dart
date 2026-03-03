@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
@@ -8,6 +9,8 @@ import '../error/exceptions.dart';
 class DioClient {
   late final Dio _dio;
   final FlutterSecureStorage _secureStorage;
+  bool _isRefreshing = false;
+  final _refreshCompleter = <Completer<String>>[];
 
   DioClient({required FlutterSecureStorage secureStorage})
     : _secureStorage = secureStorage {
@@ -25,7 +28,10 @@ class DioClient {
     );
 
     _dio.interceptors.addAll([
-      _AuthInterceptor(_secureStorage),
+      _AuthInterceptor(
+        secureStorage: _secureStorage,
+        onRefreshToken: _refreshToken,
+      ),
       PrettyDioLogger(
         requestHeader: true,
         requestBody: true,
@@ -38,22 +44,125 @@ class DioClient {
   }
 
   Dio get dio => _dio;
+
+  /// Refresh token logic with queue support for concurrent requests
+  Future<String?> _refreshToken() async {
+    if (_isRefreshing) {
+      // Another refresh is in progress, wait for it
+      final completer = Completer<String>();
+      _refreshCompleter.add(completer);
+      return completer.future;
+    }
+
+    _isRefreshing = true;
+
+    try {
+      final refreshToken = await _secureStorage.read(
+        key: AppConstants.refreshTokenKey,
+      );
+
+      if (refreshToken == null) {
+        throw const UnauthorizedException(message: 'Không có refresh token');
+      }
+
+      // Use a separate Dio instance for refresh to avoid interceptor loop
+      final refreshDio = Dio(
+        BaseOptions(
+          baseUrl: ApiConstants.baseUrl,
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+        ),
+      );
+
+      final response = await refreshDio.post(
+        ApiConstants.refreshToken,
+        data: {'refreshToken': refreshToken},
+      );
+
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        final data = response.data['data'];
+        final newAccessToken = data['accessToken'] as String;
+        final newRefreshToken = data['refreshToken'] as String;
+        final expiresAt = data['expiresAt'] as String;
+
+        // Save new tokens
+        await Future.wait([
+          _secureStorage.write(
+            key: AppConstants.accessTokenKey,
+            value: newAccessToken,
+          ),
+          _secureStorage.write(
+            key: AppConstants.refreshTokenKey,
+            value: newRefreshToken,
+          ),
+          _secureStorage.write(
+            key: AppConstants.tokenExpiryKey,
+            value: expiresAt,
+          ),
+        ]);
+
+        // Notify waiting requests
+        for (final completer in _refreshCompleter) {
+          completer.complete(newAccessToken);
+        }
+        _refreshCompleter.clear();
+
+        return newAccessToken;
+      } else {
+        throw const UnauthorizedException(
+          message: 'Không thể làm mới phiên đăng nhập',
+        );
+      }
+    } catch (e) {
+      // Notify waiting requests of failure
+      for (final completer in _refreshCompleter) {
+        completer.completeError(e);
+      }
+      _refreshCompleter.clear();
+
+      // Clear tokens on refresh failure
+      await _secureStorage.deleteAll();
+      rethrow;
+    } finally {
+      _isRefreshing = false;
+    }
+  }
 }
 
-/// Auth Interceptor for adding JWT token to requests
-class _AuthInterceptor extends Interceptor {
+/// Auth Interceptor for adding JWT token to requests and handling refresh
+class _AuthInterceptor extends QueuedInterceptor {
   final FlutterSecureStorage _secureStorage;
+  final Future<String?> Function() onRefreshToken;
 
-  _AuthInterceptor(this._secureStorage);
+  _AuthInterceptor({
+    required FlutterSecureStorage secureStorage,
+    required this.onRefreshToken,
+  }) : _secureStorage = secureStorage;
+
+  /// Endpoints that don't require authentication
+  static const _publicEndpoints = [
+    '/auth/login',
+    '/auth/register',
+    '/auth/refresh-token',
+    '/auth/forgot-password',
+    '/auth/verify-otp',
+    '/auth/reset-password',
+    '/auth/google-login',
+  ];
+
+  bool _isPublicEndpoint(String path) {
+    return _publicEndpoints.any((endpoint) => path.contains(endpoint));
+  }
 
   @override
   void onRequest(
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
-    // Skip adding token for login/register endpoints
-    if (options.path.contains('/auth/login') ||
-        options.path.contains('/auth/register')) {
+    // Skip adding token for public endpoints
+    if (_isPublicEndpoint(options.path)) {
       return handler.next(options);
     }
 
@@ -65,7 +174,40 @@ class _AuthInterceptor extends Interceptor {
   }
 
   @override
-  void onError(DioException err, ErrorInterceptorHandler handler) {
+  void onError(DioException err, ErrorInterceptorHandler handler) async {
+    // Handle 401 Unauthorized - try to refresh token
+    if (err.response?.statusCode == 401 &&
+        !_isPublicEndpoint(err.requestOptions.path)) {
+      try {
+        final newToken = await onRefreshToken();
+        if (newToken != null) {
+          // Retry the original request with new token
+          err.requestOptions.headers['Authorization'] = 'Bearer $newToken';
+
+          final retryDio = Dio(
+            BaseOptions(
+              baseUrl: ApiConstants.baseUrl,
+              headers: err.requestOptions.headers,
+            ),
+          );
+
+          final response = await retryDio.fetch(err.requestOptions);
+          return handler.resolve(response);
+        }
+      } catch (e) {
+        // Refresh failed, propagate the error
+        return handler.reject(
+          DioException(
+            requestOptions: err.requestOptions,
+            error: const UnauthorizedException(
+              message: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+            ),
+            type: DioExceptionType.badResponse,
+          ),
+        );
+      }
+    }
+
     // Convert DioException to custom exceptions
     switch (err.type) {
       case DioExceptionType.connectionTimeout:

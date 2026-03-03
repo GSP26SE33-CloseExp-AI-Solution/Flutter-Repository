@@ -1,0 +1,114 @@
+import 'package:dartz/dartz.dart';
+import '../../../../core/error/failures.dart';
+import '../entities/delivery_group.dart';
+import '../entities/delivery_order.dart';
+import '../entities/delivery_stats.dart';
+
+/// Delivery Repository Interface - Domain Layer
+///
+/// Defines the contract for delivery data operations.
+/// Implementation is in the data layer.
+abstract class DeliveryRepository {
+  // ============== DELIVERY GROUPS ==============
+
+  /// Get available delivery groups that can be accepted
+  Future<Either<Failure, List<DeliveryGroupSummary>>> getAvailableGroups();
+
+  /// Get delivery groups assigned to current staff (paginated)
+  Future<Either<Failure, PaginatedDeliveryGroups>> getMyGroups({
+    int page = 1,
+    int pageSize = 10,
+    String? status,
+  });
+
+  /// Get detailed delivery group by ID
+  Future<Either<Failure, DeliveryGroup>> getDeliveryGroupById(String groupId);
+
+  /// Accept a delivery group
+  Future<Either<Failure, DeliveryGroup>> acceptDeliveryGroup(
+    String groupId, {
+    String? notes,
+  });
+
+  /// Start delivery for a group
+  Future<Either<Failure, DeliveryGroup>> startDelivery(
+    String groupId, {
+    String? notes,
+  });
+
+  /// Complete a delivery group
+  Future<Either<Failure, DeliveryGroup>> completeDeliveryGroup(String groupId);
+
+  // ============== DELIVERY ORDERS ==============
+
+  /// Get order details for delivery
+  Future<Either<Failure, DeliveryOrder>> getOrderDetails(String orderId);
+
+  /// Confirm successful delivery with proof image
+  Future<Either<Failure, DeliveryRecord>> confirmDelivery(
+    String orderId, {
+    String? proofImageUrl,
+    String? notes,
+  });
+
+  /// Report delivery failure
+  Future<Either<Failure, DeliveryRecord>> reportDeliveryFailure(
+    String orderId, {
+    required String failureReason,
+    String? notes,
+  });
+
+  // ============== HISTORY & STATS ==============
+
+  /// Get delivery history (paginated)
+  Future<Either<Failure, PaginatedDeliveryHistory>> getDeliveryHistory({
+    int page = 1,
+    int pageSize = 20,
+    DateTime? fromDate,
+    DateTime? toDate,
+    String? status,
+  });
+
+  /// Get delivery statistics for current staff
+  Future<Either<Failure, DeliveryStats>> getDeliveryStats();
+}
+
+/// Paginated response for delivery groups
+class PaginatedDeliveryGroups {
+  final List<DeliveryGroupSummary> groups;
+  final int currentPage;
+  final int totalPages;
+  final int totalCount;
+  final bool hasNextPage;
+
+  const PaginatedDeliveryGroups({
+    required this.groups,
+    required this.currentPage,
+    required this.totalPages,
+    required this.totalCount,
+    required this.hasNextPage,
+  });
+
+  bool get isEmpty => groups.isEmpty;
+  bool get isNotEmpty => groups.isNotEmpty;
+}
+
+/// Paginated response for delivery history
+class PaginatedDeliveryHistory {
+  final List<DeliveryRecord> records;
+  final int currentPage;
+  final int totalPages;
+  final int totalCount;
+  final bool hasNextPage;
+
+  const PaginatedDeliveryHistory({
+    required this.records,
+    required this.currentPage,
+    required this.totalPages,
+    required this.totalCount,
+    required this.hasNextPage,
+  });
+
+  bool get isEmpty => records.isEmpty;
+  bool get isNotEmpty => records.isNotEmpty;
+}

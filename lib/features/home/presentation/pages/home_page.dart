@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_event.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
@@ -133,35 +134,35 @@ class HomePage extends StatelessWidget {
                       mainAxisSpacing: 12,
                       children: [
                         _buildMenuCard(
-                          icon: Icons.list_alt,
-                          title: 'Đơn hàng',
+                          icon: Icons.local_shipping,
+                          title: 'Nhận đơn',
+                          subtitle: 'Đơn hàng có sẵn',
                           onTap: () {
-                            // TODO: Navigate to orders
-                            _showComingSoon(context);
+                            context.push('/delivery/available');
                           },
                         ),
                         _buildMenuCard(
-                          icon: Icons.map,
-                          title: 'Bản đồ',
+                          icon: Icons.assignment,
+                          title: 'Đơn của tôi',
+                          subtitle: 'Đang giao',
                           onTap: () {
-                            // TODO: Navigate to map
-                            _showComingSoon(context);
+                            context.push('/delivery/my');
                           },
                         ),
                         _buildMenuCard(
                           icon: Icons.history,
                           title: 'Lịch sử',
+                          subtitle: 'Đã hoàn thành',
                           onTap: () {
-                            // TODO: Navigate to history
-                            _showComingSoon(context);
+                            context.push('/delivery/history');
                           },
                         ),
                         _buildMenuCard(
-                          icon: Icons.settings,
-                          title: 'Cài đặt',
+                          icon: Icons.bar_chart,
+                          title: 'Thống kê',
+                          subtitle: 'Hiệu suất',
                           onTap: () {
-                            // TODO: Navigate to settings
-                            _showComingSoon(context);
+                            context.push('/delivery/stats');
                           },
                         ),
                       ],
@@ -212,6 +213,7 @@ class HomePage extends StatelessWidget {
   Widget _buildMenuCard({
     required IconData icon,
     required String title,
+    String? subtitle,
     required VoidCallback onTap,
   }) {
     return Card(
@@ -234,6 +236,16 @@ class HomePage extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
+              if (subtitle != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -264,15 +276,6 @@ class HomePage extends StatelessWidget {
             child: const Text('Đăng xuất'),
           ),
         ],
-      ),
-    );
-  }
-
-  void _showComingSoon(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Tính năng đang được phát triển'),
-        duration: Duration(seconds: 2),
       ),
     );
   }
