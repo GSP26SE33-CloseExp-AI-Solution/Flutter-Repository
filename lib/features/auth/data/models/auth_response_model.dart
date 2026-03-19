@@ -58,3 +58,46 @@ class LoginRequestModel {
     return {'email': email, 'password': password};
   }
 }
+
+
+
+
+
+/// Refresh Token Request Model
+class RefreshTokenRequestModel {
+  final String refreshToken;
+
+  const RefreshTokenRequestModel({required this.refreshToken});
+
+  Map<String, dynamic> toJson() {
+    return {'refreshToken': refreshToken};
+  }
+}
+
+/// Logout Request Model
+class LogoutRequestModel {
+  final String refreshToken;
+
+  const LogoutRequestModel({required this.refreshToken});
+
+  Map<String, dynamic> toJson() {
+    return {'refreshToken': refreshToken};
+  }
+}
+
+
+
+/// Update Profile Request Model
+class UpdateProfileRequestModel {
+  final String? fullName;
+  final String? phone;
+
+  const UpdateProfileRequestModel({this.fullName, this.phone});
+
+  Map<String, dynamic> toJson() {
+    return {
+      if (fullName != null) 'fullName': fullName,
+      if (phone != null) 'phone': phone,
+    };
+  }
+}

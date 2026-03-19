@@ -21,6 +21,8 @@ class DeliveryOrderModel extends DeliveryOrder {
     required super.timeSlotDisplay,
     required super.totalItems,
     super.items,
+    super.latitude,
+    super.longitude,
   });
 
   factory DeliveryOrderModel.fromJson(Map<String, dynamic> json) {
@@ -39,13 +41,18 @@ class DeliveryOrderModel extends DeliveryOrder {
       orderDate: _parseDateTime(json['orderDate']),
       customerName: json['customerName'] as String? ?? '',
       customerPhone: json['customerPhone'] as String? ?? '',
-      deliveryAddress: json['deliveryAddress'] as String?,
-      pickupPointName: json['pickupPointName'] as String?,
-      pickupPointAddress: json['pickupPointAddress'] as String?,
+      // BE field: addressLine (for home delivery) — was 'deliveryAddress' (wrong)
+      deliveryAddress: json['addressLine'] as String?,
+      // BE field: collectionPointName — was 'pickupPointName' (wrong)
+      pickupPointName: json['collectionPointName'] as String?,
+      // BE has no separate collectionPointAddress in DeliveryOrderResponseDto
+      pickupPointAddress: null,
       deliveryNote: json['deliveryNote'] as String?,
       timeSlotDisplay: json['timeSlotDisplay'] as String? ?? '',
       totalItems: json['totalItems'] as int? ?? 0,
       items: items,
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
     );
   }
 
@@ -60,12 +67,13 @@ class DeliveryOrderModel extends DeliveryOrder {
       'orderDate': orderDate.toIso8601String(),
       'customerName': customerName,
       'customerPhone': customerPhone,
-      'deliveryAddress': deliveryAddress,
-      'pickupPointName': pickupPointName,
-      'pickupPointAddress': pickupPointAddress,
+      'addressLine': deliveryAddress,
+      'collectionPointName': pickupPointName,
       'deliveryNote': deliveryNote,
       'timeSlotDisplay': timeSlotDisplay,
       'totalItems': totalItems,
+      'latitude': latitude,
+      'longitude': longitude,
       'items': items
           .map((e) => (e as DeliveryOrderItemModel).toJson())
           .toList(),
@@ -121,6 +129,8 @@ class DeliveryRecordModel extends DeliveryRecord {
     required super.status,
     super.failureReason,
     super.deliveredAt,
+    super.deliveryLatitude,
+    super.deliveryLongitude,
   });
 
   factory DeliveryRecordModel.fromJson(Map<String, dynamic> json) {
@@ -133,6 +143,8 @@ class DeliveryRecordModel extends DeliveryRecord {
       status: DeliveryOrderStatus.fromString(json['status'] as String? ?? ''),
       failureReason: json['failureReason'] as String?,
       deliveredAt: _parseNullableDateTime(json['deliveredAt']),
+      deliveryLatitude: (json['deliveryLatitude'] as num?)?.toDouble(),
+      deliveryLongitude: (json['deliveryLongitude'] as num?)?.toDouble(),
     );
   }
 
@@ -146,6 +158,8 @@ class DeliveryRecordModel extends DeliveryRecord {
       'status': status.toApiString(),
       'failureReason': failureReason,
       'deliveredAt': deliveredAt?.toIso8601String(),
+      'deliveryLatitude': deliveryLatitude,
+      'deliveryLongitude': deliveryLongitude,
     };
   }
 

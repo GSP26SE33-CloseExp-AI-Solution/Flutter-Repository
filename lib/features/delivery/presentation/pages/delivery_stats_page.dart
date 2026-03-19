@@ -6,6 +6,7 @@ import '../../domain/entities/delivery_stats.dart';
 import '../bloc/delivery_bloc.dart';
 import '../bloc/delivery_event.dart';
 import '../bloc/delivery_state.dart';
+import '../widgets/widgets.dart';
 
 /// Delivery Stats Page - shows delivery performance statistics
 class DeliveryStatsPage extends StatefulWidget {
@@ -44,16 +45,7 @@ class _DeliveryStatsPageState extends State<DeliveryStatsPage> {
       body: BlocBuilder<DeliveryBloc, DeliveryState>(
         builder: (context, state) {
           if (state is DeliveryLoading) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Đang tải thống kê...'),
-                ],
-              ),
-            );
+            return const DeliveryLoadingState(message: 'Đang tải thống kê...');
           }
 
           if (state is DeliveryStatsLoaded) {
@@ -61,34 +53,14 @@ class _DeliveryStatsPageState extends State<DeliveryStatsPage> {
           }
 
           if (state is DeliveryError) {
-            return _buildErrorState(state.message);
+            return DeliveryErrorState(
+              message: state.message,
+              onRetry: _loadStats,
+            );
           }
 
           return const SizedBox.shrink();
         },
-      ),
-    );
-  }
-
-  Widget _buildErrorState(String message) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.error_outline, size: 80, color: Colors.red[300]),
-          const SizedBox(height: 16),
-          Text(
-            message,
-            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: _loadStats,
-            icon: const Icon(Icons.refresh),
-            label: const Text('Thử lại'),
-          ),
-        ],
       ),
     );
   }
@@ -370,7 +342,7 @@ class _DeliveryStatsPageState extends State<DeliveryStatsPage> {
       child: ListTile(
         onTap: onTap,
         leading: CircleAvatar(
-          backgroundColor: color.withOpacity(0.1),
+          backgroundColor: color.withValues(alpha: 0.1),
           child: Icon(icon, color: color),
         ),
         title: Text(title),

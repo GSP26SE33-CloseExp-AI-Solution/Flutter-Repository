@@ -11,6 +11,14 @@ import '../features/auth/domain/usecases/get_cached_user_usecase.dart';
 import '../features/auth/domain/usecases/login_usecase.dart';
 import '../features/auth/domain/usecases/logout_usecase.dart';
 import '../features/auth/presentation/bloc/auth_bloc.dart';
+import '../features/delivery/data/datasources/delivery_remote_datasource.dart';
+import '../features/delivery/data/datasources/upload_datasource.dart';
+import '../features/delivery/data/repositories/delivery_repository_impl.dart';
+import '../features/delivery/data/repositories/upload_repository_impl.dart';
+import '../features/delivery/domain/repositories/delivery_repository.dart';
+import '../features/delivery/domain/repositories/upload_repository.dart';
+import '../features/delivery/domain/usecases/upload_proof_image_usecase.dart';
+import '../features/delivery/presentation/bloc/delivery_bloc.dart';
 
 // Service Locator using GetIt
 //
@@ -73,4 +81,30 @@ Future<void> initializeDependencies() async {
       getCachedUserUseCase: sl(),
     ),
   );
+
+  // ============== DELIVERY FEATURE ==============
+
+  // Data Sources
+  sl.registerLazySingleton<DeliveryRemoteDataSource>(
+    () => DeliveryRemoteDataSourceImpl(dio: sl<DioClient>().dio),
+  );
+
+  sl.registerLazySingleton<UploadDataSource>(
+    () => UploadDataSourceImpl(dio: sl<DioClient>().dio),
+  );
+
+  // Repository
+  sl.registerLazySingleton<DeliveryRepository>(
+    () => DeliveryRepositoryImpl(remoteDataSource: sl(), networkInfo: sl()),
+  );
+
+  sl.registerLazySingleton<UploadRepository>(
+    () => UploadRepositoryImpl(dataSource: sl(), networkInfo: sl()),
+  );
+
+  // Use Cases
+  sl.registerLazySingleton(() => UploadProofImageUseCase(sl()));
+
+  // BLoC - Factory (new instance each time)
+  sl.registerFactory<DeliveryBloc>(() => DeliveryBloc(repository: sl()));
 }

@@ -28,11 +28,22 @@ class DeliveryLoading extends DeliveryState {
   List<Object?> get props => [message];
 }
 
-/// Error state
+/// Error state for loading failures (shows full error screen)
 class DeliveryError extends DeliveryState {
   final String message;
 
   const DeliveryError({required this.message});
+
+  @override
+  List<Object?> get props => [message];
+}
+
+/// Error state for action failures (shows snackbar only, no full screen)
+/// Used for: accept, start, complete, confirm, report failure
+class DeliveryActionError extends DeliveryState {
+  final String message;
+
+  const DeliveryActionError({required this.message});
 
   @override
   List<Object?> get props => [message];
@@ -94,13 +105,13 @@ class MyGroupsLoaded extends DeliveryState {
 
   @override
   List<Object?> get props => [
-        groups,
-        currentPage,
-        totalPages,
-        totalCount,
-        hasNextPage,
-        isLoadingMore,
-      ];
+    groups,
+    currentPage,
+    totalPages,
+    totalCount,
+    hasNextPage,
+    isLoadingMore,
+  ];
 }
 
 /// Group details loaded
@@ -159,22 +170,22 @@ class DeliveryGroupCompleted extends DeliveryState {
 
 /// Delivery confirmed for an order
 class DeliveryConfirmed extends DeliveryState {
-  final DeliveryRecord record;
+  final DeliveryOrder order;
 
-  const DeliveryConfirmed({required this.record});
+  const DeliveryConfirmed({required this.order});
 
   @override
-  List<Object?> get props => [record];
+  List<Object?> get props => [order];
 }
 
 /// Delivery failure reported
 class DeliveryFailureReported extends DeliveryState {
-  final DeliveryRecord record;
+  final DeliveryOrder order;
 
-  const DeliveryFailureReported({required this.record});
+  const DeliveryFailureReported({required this.order});
 
   @override
-  List<Object?> get props => [record];
+  List<Object?> get props => [order];
 }
 
 // ============== STATS & HISTORY STATES ==============
@@ -230,13 +241,13 @@ class DeliveryHistoryLoaded extends DeliveryState {
 
   @override
   List<Object?> get props => [
-        records,
-        currentPage,
-        totalPages,
-        totalCount,
-        hasNextPage,
-        isLoadingMore,
-      ];
+    records,
+    currentPage,
+    totalPages,
+    totalCount,
+    hasNextPage,
+    isLoadingMore,
+  ];
 }
 
 // ============== COMBINED STATE ==============

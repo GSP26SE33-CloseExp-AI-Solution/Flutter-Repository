@@ -9,10 +9,12 @@ import '../../features/delivery/presentation/bloc/delivery_bloc.dart';
 import '../../features/delivery/presentation/pages/available_groups_page.dart';
 import '../../features/delivery/presentation/pages/delivery_group_details_page.dart';
 import '../../features/delivery/presentation/pages/delivery_history_page.dart';
+import '../../features/delivery/presentation/pages/delivery_route_map_page.dart';
 import '../../features/delivery/presentation/pages/delivery_stats_page.dart';
 import '../../features/delivery/presentation/pages/my_deliveries_page.dart';
 import '../../features/delivery/presentation/pages/order_details_page.dart';
-import '../../features/home/presentation/pages/home_page.dart';
+import '../../features/home/presentation/pages/main_shell_page.dart';
+import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../injection_container.dart';
 
 /// App Router Configuration
@@ -76,34 +78,64 @@ class AppRouter {
           builder: (context, state) => const LoginPage(),
         ),
 
-        // Home Screen (Protected)
-        GoRoute(
-          path: Routes.home,
-          name: 'home',
-          builder: (context, state) => const HomePage(),
+        // Main shell with bottom navigation (Protected)
+        StatefulShellRoute.indexedStack(
+          builder: (context, state, navigationShell) =>
+              MainShellPage(navigationShell: navigationShell),
+          branches: [
+            // Work: My deliveries (default tab at '/')
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: Routes.home,
+                  name: 'tab-work',
+                  builder: (context, state) => BlocProvider(
+                    create: (_) => sl<DeliveryBloc>(),
+                    child: const MyDeliveriesPage(),
+                  ),
+                ),
+              ],
+            ),
+            // Orders: Available groups (accept orders)
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: Routes.deliveryAvailable,
+                  name: 'tab-orders',
+                  builder: (context, state) => BlocProvider(
+                    create: (_) => sl<DeliveryBloc>(),
+                    child: const AvailableGroupsPage(),
+                  ),
+                ),
+              ],
+            ),
+            // History
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: Routes.deliveryHistory,
+                  name: 'tab-history',
+                  builder: (context, state) => BlocProvider(
+                    create: (_) => sl<DeliveryBloc>(),
+                    child: const DeliveryHistoryPage(),
+                  ),
+                ),
+              ],
+            ),
+            // Profile
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: Routes.profile,
+                  name: 'tab-profile',
+                  builder: (context, state) => const ProfilePage(),
+                ),
+              ],
+            ),
+          ],
         ),
 
         // ============== DELIVERY ROUTES ==============
-
-        // Available Groups
-        GoRoute(
-          path: Routes.deliveryAvailable,
-          name: 'available-groups',
-          builder: (context, state) => BlocProvider(
-            create: (_) => sl<DeliveryBloc>(),
-            child: const AvailableGroupsPage(),
-          ),
-        ),
-
-        // My Deliveries
-        GoRoute(
-          path: Routes.deliveryMy,
-          name: 'my-deliveries',
-          builder: (context, state) => BlocProvider(
-            create: (_) => sl<DeliveryBloc>(),
-            child: const MyDeliveriesPage(),
-          ),
-        ),
 
         // Delivery Group Details
         GoRoute(
@@ -131,16 +163,6 @@ class AppRouter {
           },
         ),
 
-        // Delivery History
-        GoRoute(
-          path: Routes.deliveryHistory,
-          name: 'delivery-history',
-          builder: (context, state) => BlocProvider(
-            create: (_) => sl<DeliveryBloc>(),
-            child: const DeliveryHistoryPage(),
-          ),
-        ),
-
         // Delivery Stats
         GoRoute(
           path: Routes.deliveryStats,
@@ -149,6 +171,13 @@ class AppRouter {
             create: (_) => sl<DeliveryBloc>(),
             child: const DeliveryStatsPage(),
           ),
+        ),
+
+        // Delivery Route Map (placeholder)
+        GoRoute(
+          path: Routes.deliveryMap,
+          name: 'delivery-map',
+          builder: (context, state) => const DeliveryRouteMapPage(),
         ),
       ],
     );
@@ -162,14 +191,15 @@ class Routes {
   static const String splash = '/splash';
   static const String login = '/login';
   static const String home = '/';
+  static const String profile = '/profile';
 
   // Delivery routes
   static const String deliveryAvailable = '/delivery/available';
-  static const String deliveryMy = '/delivery/my';
   static const String deliveryGroup = '/delivery/group';
   static const String deliveryOrder = '/delivery/order';
   static const String deliveryHistory = '/delivery/history';
   static const String deliveryStats = '/delivery/stats';
+  static const String deliveryMap = '/delivery/map';
 
   // Helper methods for parameterized routes
   static String deliveryGroupDetails(String groupId) =>

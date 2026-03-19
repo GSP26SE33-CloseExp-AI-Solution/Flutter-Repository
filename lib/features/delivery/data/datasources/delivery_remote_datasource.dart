@@ -10,11 +10,14 @@ import '../models/delivery_stats_model.dart';
 /// Handles all API calls related to delivery operations.
 abstract class DeliveryRemoteDataSource {
   // Delivery Groups
-  Future<List<DeliveryGroupSummaryModel>> getAvailableGroups();
+  Future<List<DeliveryGroupSummaryModel>> getAvailableGroups({
+    DateTime? deliveryDate,
+  });
   Future<PaginatedGroupsResponse> getMyGroups({
     int page = 1,
     int pageSize = 10,
     String? status,
+    DateTime? deliveryDate,
   });
   Future<DeliveryGroupModel> getDeliveryGroupById(String groupId);
   Future<DeliveryGroupModel> acceptDeliveryGroup(
@@ -26,12 +29,12 @@ abstract class DeliveryRemoteDataSource {
 
   // Delivery Orders
   Future<DeliveryOrderModel> getOrderDetails(String orderId);
-  Future<DeliveryRecordModel> confirmDelivery(
+  Future<DeliveryOrderModel> confirmDelivery(
     String orderId, {
     String? proofImageUrl,
     String? notes,
   });
-  Future<DeliveryRecordModel> reportDeliveryFailure(
+  Future<DeliveryOrderModel> reportDeliveryFailure(
     String orderId, {
     required String failureReason,
     String? notes,
@@ -55,9 +58,21 @@ class DeliveryRemoteDataSourceImpl implements DeliveryRemoteDataSource {
   DeliveryRemoteDataSourceImpl({required Dio dio}) : _dio = dio;
 
   @override
-  Future<List<DeliveryGroupSummaryModel>> getAvailableGroups() async {
+  Future<List<DeliveryGroupSummaryModel>> getAvailableGroups({
+    DateTime? deliveryDate,
+  }) async {
     try {
-      final response = await _dio.get(ApiConstants.deliveryGroupsAvailable);
+      final queryParams = <String, dynamic>{};
+      if (deliveryDate != null) {
+        queryParams['deliveryDate'] = deliveryDate.toIso8601String().split(
+          'T',
+        )[0];
+      }
+
+      final response = await _dio.get(
+        ApiConstants.deliveryGroupsAvailable,
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
+      );
       return _handleListResponse<DeliveryGroupSummaryModel>(
         response,
         DeliveryGroupSummaryModel.fromJson,
@@ -74,6 +89,7 @@ class DeliveryRemoteDataSourceImpl implements DeliveryRemoteDataSource {
     int page = 1,
     int pageSize = 10,
     String? status,
+    DateTime? deliveryDate,
   }) async {
     try {
       final queryParams = <String, dynamic>{
@@ -81,6 +97,11 @@ class DeliveryRemoteDataSourceImpl implements DeliveryRemoteDataSource {
         'pageSize': pageSize,
       };
       if (status != null) queryParams['status'] = status;
+      if (deliveryDate != null) {
+        queryParams['deliveryDate'] = deliveryDate.toIso8601String().split(
+          'T',
+        )[0];
+      }
 
       final response = await _dio.get(
         ApiConstants.deliveryGroupsMy,
@@ -173,7 +194,7 @@ class DeliveryRemoteDataSourceImpl implements DeliveryRemoteDataSource {
   }
 
   @override
-  Future<DeliveryRecordModel> confirmDelivery(
+  Future<DeliveryOrderModel> confirmDelivery(
     String orderId, {
     String? proofImageUrl,
     String? notes,
@@ -183,7 +204,8 @@ class DeliveryRemoteDataSourceImpl implements DeliveryRemoteDataSource {
         ApiConstants.confirmDelivery(orderId),
         data: {'proofImageUrl': proofImageUrl, 'notes': notes},
       );
-      return _handleSingleResponse(response, DeliveryRecordModel.fromJson);
+      // Backend returns DeliveryOrderResponseDto after confirm action.
+      return _handleSingleResponse(response, DeliveryOrderModel.fromJson);
     } on DioException {
       rethrow;
     } catch (e) {
@@ -192,7 +214,7 @@ class DeliveryRemoteDataSourceImpl implements DeliveryRemoteDataSource {
   }
 
   @override
-  Future<DeliveryRecordModel> reportDeliveryFailure(
+  Future<DeliveryOrderModel> reportDeliveryFailure(
     String orderId, {
     required String failureReason,
     String? notes,
@@ -202,7 +224,8 @@ class DeliveryRemoteDataSourceImpl implements DeliveryRemoteDataSource {
         ApiConstants.reportDeliveryFailure(orderId),
         data: {'failureReason': failureReason, 'notes': notes},
       );
-      return _handleSingleResponse(response, DeliveryRecordModel.fromJson);
+      // Backend returns DeliveryOrderResponseDto after failure report.
+      return _handleSingleResponse(response, DeliveryOrderModel.fromJson);
     } on DioException {
       rethrow;
     } catch (e) {

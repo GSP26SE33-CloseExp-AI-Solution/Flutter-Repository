@@ -6,7 +6,7 @@ import '../../domain/entities/delivery_group.dart';
 import '../bloc/delivery_bloc.dart';
 import '../bloc/delivery_event.dart';
 import '../bloc/delivery_state.dart';
-import '../widgets/delivery_group_card.dart';
+import '../widgets/widgets.dart';
 
 /// My Deliveries Page - shows delivery groups assigned to current staff
 class MyDeliveriesPage extends StatefulWidget {
@@ -105,118 +105,72 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
         ],
       ),
       body: BlocConsumer<DeliveryBloc, DeliveryState>(
-        listener: (context, state) {
-          if (state is DeliveryStarted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Đã bắt đầu giao hàng'),
-                backgroundColor: Colors.green,
-              ),
-            );
-            _loadGroups(refresh: true);
-          } else if (state is DeliveryGroupCompleted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Đã hoàn thành nhóm giao'),
-                backgroundColor: Colors.green,
-              ),
-            );
-            _loadGroups(refresh: true);
-          } else if (state is DeliveryError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          if (state is DeliveryLoading) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Đang tải...'),
-                ],
-              ),
-            );
-          }
-
-          if (state is MyGroupsLoaded) {
-            if (state.isEmpty) {
-              return _buildEmptyState();
-            }
-            return _buildGroupsList(state);
-          }
-
-          if (state is DeliveryError) {
-            return _buildErrorState(state.message);
-          }
-
-          return const SizedBox.shrink();
-        },
+        listener: _handleStateChange,
+        builder: _buildBody,
       ),
     );
   }
 
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.delivery_dining_outlined, size: 80, color: Colors.grey[400]),
-          const SizedBox(height: 16),
-          Text(
-            'Chưa có đơn hàng nào',
-            style: TextStyle(fontSize: 18, color: Colors.grey[600]),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Nhận đơn từ tab "Đơn có sẵn" để bắt đầu',
-            style: TextStyle(color: Colors.grey[500]),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () => _loadGroups(refresh: true),
-            icon: const Icon(Icons.refresh),
-            label: const Text('Làm mới'),
-          ),
-        ],
-      ),
-    );
+  void _handleStateChange(BuildContext context, DeliveryState state) {
+    if (state is DeliveryStarted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Đã bắt đầu giao hàng'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      _loadGroups(refresh: true);
+    } else if (state is DeliveryGroupCompleted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Đã hoàn thành nhóm giao'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      _loadGroups(refresh: true);
+    } else if (state is DeliveryError) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+      );
+    } else if (state is DeliveryActionError) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+      );
+      _loadGroups(refresh: true);
+    }
   }
 
-  Widget _buildErrorState(String message) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.error_outline, size: 80, color: Colors.red[300]),
-          const SizedBox(height: 16),
-          Text(
-            message,
-            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () => _loadGroups(refresh: true),
-            icon: const Icon(Icons.refresh),
-            label: const Text('Thử lại'),
-          ),
-        ],
-      ),
-    );
+  Widget _buildBody(BuildContext context, DeliveryState state) {
+    if (state is DeliveryLoading) {
+      return const DeliveryLoadingState(message: 'Đang tải...');
+    }
+
+    if (state is MyGroupsLoaded) {
+      if (state.isEmpty) {
+        return DeliveryEmptyState(
+          icon: Icons.delivery_dining_outlined,
+          title: 'Chưa có đơn hàng nào',
+          subtitle: 'Nhận đơn từ tab "Đơn có sẵn" để bắt đầu',
+          actionLabel: 'Làm mới',
+          onAction: () => _loadGroups(refresh: true),
+        );
+      }
+      return _buildGroupsList(state);
+    }
+
+    if (state is DeliveryError) {
+      return DeliveryErrorState(
+        message: state.message,
+        onRetry: () => _loadGroups(refresh: true),
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 
   Widget _buildGroupsList(MyGroupsLoaded state) {
     return RefreshIndicator(
-      onRefresh: () async {
-        _loadGroups(refresh: true);
-      },
+      onRefresh: () async => _loadGroups(refresh: true),
       child: ListView.builder(
         controller: _scrollController,
         padding: const EdgeInsets.all(16),
@@ -239,11 +193,11 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
               Routes.deliveryGroupDetails(group.deliveryGroupId),
             ),
             onStart: group.status == DeliveryGroupStatus.assigned
-                ? () => _showStartDialog(group)
+                ? () => _handleStartDelivery(group)
                 : null,
             onComplete: group.status == DeliveryGroupStatus.inTransit &&
                     group.pendingOrders == 0
-                ? () => _showCompleteDialog(group)
+                ? () => _handleCompleteGroup(group)
                 : null,
           );
         },
@@ -251,60 +205,34 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
     );
   }
 
-  void _showStartDialog(DeliveryGroupSummary group) {
-    showDialog(
+  void _handleStartDelivery(DeliveryGroupSummary group) async {
+    final confirmed = await showDeliveryConfirmDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Bắt đầu giao hàng'),
-        content: Text(
-          'Bắt đầu giao hàng cho nhóm "${group.groupCode}"?\n\n'
+      title: 'Bắt đầu giao hàng',
+      content: 'Bắt đầu giao hàng cho nhóm "${group.groupCode}"?\n\n'
           '• Số đơn: ${group.totalOrders}\n'
           '• Khu vực: ${group.deliveryArea}',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Hủy'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.read<DeliveryBloc>().add(
-                    StartDelivery(groupId: group.deliveryGroupId),
-                  );
-            },
-            child: const Text('Bắt đầu'),
-          ),
-        ],
-      ),
+      confirmLabel: 'Bắt đầu',
     );
+    if (confirmed == true && mounted) {
+      context.read<DeliveryBloc>().add(
+            StartDelivery(groupId: group.deliveryGroupId),
+          );
+    }
   }
 
-  void _showCompleteDialog(DeliveryGroupSummary group) {
-    showDialog(
+  void _handleCompleteGroup(DeliveryGroupSummary group) async {
+    final confirmed = await showDeliveryConfirmDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Hoàn thành nhóm giao'),
-        content: Text(
-          'Xác nhận hoàn thành nhóm giao "${group.groupCode}"?\n\n'
+      title: 'Hoàn thành nhóm giao',
+      content: 'Xác nhận hoàn thành nhóm giao "${group.groupCode}"?\n\n'
           '• Đã giao: ${group.completedOrders}/${group.totalOrders}',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Hủy'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.read<DeliveryBloc>().add(
-                    CompleteDeliveryGroup(groupId: group.deliveryGroupId),
-                  );
-            },
-            child: const Text('Hoàn thành'),
-          ),
-        ],
-      ),
+      confirmLabel: 'Hoàn thành',
     );
+    if (confirmed == true && mounted) {
+      context.read<DeliveryBloc>().add(
+            CompleteDeliveryGroup(groupId: group.deliveryGroupId),
+          );
+    }
   }
 }

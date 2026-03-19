@@ -12,16 +12,20 @@ class ApiConstants {
 
   // Base URL - Environment-aware configuration
   static String get baseUrl {
+    // For web
     if (kIsWeb) {
-      return 'http://localhost:5000/api';
+      return 'http://localhost:5014/api';
     }
+    // For Android
     if (Platform.isAndroid) {
-      return 'http://10.0.2.2:5000/api'; // Android Emulator
+      return 'http://192.168.1.13:5014/api'; // Real Device
+      // return 'http://10.0.2.2/api'; // Android Emulator
     }
+    // For iOS
     if (Platform.isIOS) {
-      return 'http://localhost:5000/api'; // iOS Simulator
+      return 'http://localhost:5014/api'; // iOS Simulator
     }
-    return 'http://localhost:5000/api';
+    return 'http://localhost:5014/api';
   }
 
   // Production URL (uncomment when deploying)
@@ -66,6 +70,10 @@ class ApiConstants {
 
   // ============== UPLOAD ENDPOINTS ==============
   static const String upload = '/upload';
+  static const String uploadTest = '/upload/test';
+
+  // ============== USER PROFILE ENDPOINTS ==============
+  static const String updateCurrentUser = '/users/current-user';
 
   // ============== TIMEOUTS ==============
   static const Duration connectionTimeout = Duration(seconds: 30);

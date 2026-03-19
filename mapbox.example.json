@@ -1,0 +1,9 @@
+{
+"MAPBOX_ACCESS_TOKEN": "pk.*****",
+"MAPBOX_BASE_URL": "https://api.mapbox.com",
+"MAPBOX_TIMEOUT_SECONDS": "10",
+"MAPBOX_RETRY_COUNT": "2",
+"MAPBOX_RETRY_DELAY_MS": "500",
+"MAPBOX_COUNTRY_CODE": "vn",
+"MAPBOX_LANGUAGE": "vi"
+}

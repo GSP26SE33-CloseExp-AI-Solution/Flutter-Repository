@@ -32,7 +32,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<LogoutEvent>(_onLogout);
   }
 
-  /// Handle check auth status event (app startup)
   Future<void> _onCheckAuthStatus(
     CheckAuthStatusEvent event,
     Emitter<AuthState> emit,
@@ -66,7 +65,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     );
   }
 
-  /// Handle login event
   Future<void> _onLogin(LoginEvent event, Emitter<AuthState> emit) async {
     emit(const LoginLoading());
 
@@ -79,8 +77,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       (authResult) => emit(AuthAuthenticated(user: authResult.user)),
     );
   }
-
-  /// Handle logout event
+  
   Future<void> _onLogout(LogoutEvent event, Emitter<AuthState> emit) async {
     emit(const LogoutLoading());
 

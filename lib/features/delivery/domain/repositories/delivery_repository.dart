@@ -12,13 +12,16 @@ abstract class DeliveryRepository {
   // ============== DELIVERY GROUPS ==============
 
   /// Get available delivery groups that can be accepted
-  Future<Either<Failure, List<DeliveryGroupSummary>>> getAvailableGroups();
+  Future<Either<Failure, List<DeliveryGroupSummary>>> getAvailableGroups({
+    DateTime? deliveryDate,
+  });
 
   /// Get delivery groups assigned to current staff (paginated)
   Future<Either<Failure, PaginatedDeliveryGroups>> getMyGroups({
     int page = 1,
     int pageSize = 10,
     String? status,
+    DateTime? deliveryDate,
   });
 
   /// Get detailed delivery group by ID
@@ -45,14 +48,14 @@ abstract class DeliveryRepository {
   Future<Either<Failure, DeliveryOrder>> getOrderDetails(String orderId);
 
   /// Confirm successful delivery with proof image
-  Future<Either<Failure, DeliveryRecord>> confirmDelivery(
+  Future<Either<Failure, DeliveryOrder>> confirmDelivery(
     String orderId, {
     String? proofImageUrl,
     String? notes,
   });
 
   /// Report delivery failure
-  Future<Either<Failure, DeliveryRecord>> reportDeliveryFailure(
+  Future<Either<Failure, DeliveryOrder>> reportDeliveryFailure(
     String orderId, {
     required String failureReason,
     String? notes,

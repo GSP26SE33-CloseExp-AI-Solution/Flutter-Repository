@@ -21,9 +21,12 @@ class LoginUseCase implements UseCase<AuthResult, LoginParams> {
       password: params.password,
     );
 
-    return result.fold((failure) => Left(failure), (authResult) {
+    return await result.fold((failure) async => Left(failure), (
+      authResult,
+    ) async {
       // Check if user is a delivery staff
       if (!authResult.user.isDeliveryStaff) {
+        await repository.logout();
         return const Left(
           ForbiddenFailure(
             message:
@@ -35,6 +38,7 @@ class LoginUseCase implements UseCase<AuthResult, LoginParams> {
 
       // Check if user account is active
       if (!authResult.user.isActive) {
+        await repository.logout();
         return const Left(
           AuthenticationFailure(
             message:

@@ -10,8 +10,8 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
   final DeliveryRepository _repository;
 
   DeliveryBloc({required DeliveryRepository repository})
-      : _repository = repository,
-        super(const DeliveryInitial()) {
+    : _repository = repository,
+      super(const DeliveryInitial()) {
     // Load events
     on<LoadAvailableGroups>(_onLoadAvailableGroups);
     on<LoadMyGroups>(_onLoadMyGroups);
@@ -40,7 +40,9 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
   ) async {
     emit(const DeliveryLoading(message: 'Đang tải đơn hàng có sẵn...'));
 
-    final result = await _repository.getAvailableGroups();
+    final result = await _repository.getAvailableGroups(
+      deliveryDate: event.deliveryDate,
+    );
 
     result.fold(
       (failure) => emit(DeliveryError(message: failure.message)),
@@ -62,18 +64,21 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
         page: event.page,
         pageSize: event.pageSize,
         status: event.status,
+        deliveryDate: event.deliveryDate,
       );
 
       result.fold(
         (failure) => emit(DeliveryError(message: failure.message)),
-        (paginated) => emit(currentState.copyWith(
-          groups: [...currentState.groups, ...paginated.groups],
-          currentPage: paginated.currentPage,
-          totalPages: paginated.totalPages,
-          totalCount: paginated.totalCount,
-          hasNextPage: paginated.hasNextPage,
-          isLoadingMore: false,
-        )),
+        (paginated) => emit(
+          currentState.copyWith(
+            groups: [...currentState.groups, ...paginated.groups],
+            currentPage: paginated.currentPage,
+            totalPages: paginated.totalPages,
+            totalCount: paginated.totalCount,
+            hasNextPage: paginated.hasNextPage,
+            isLoadingMore: false,
+          ),
+        ),
       );
     } else {
       // Fresh load or refresh
@@ -83,17 +88,20 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
         page: 1,
         pageSize: event.pageSize,
         status: event.status,
+        deliveryDate: event.deliveryDate,
       );
 
       result.fold(
         (failure) => emit(DeliveryError(message: failure.message)),
-        (paginated) => emit(MyGroupsLoaded(
-          groups: paginated.groups,
-          currentPage: paginated.currentPage,
-          totalPages: paginated.totalPages,
-          totalCount: paginated.totalCount,
-          hasNextPage: paginated.hasNextPage,
-        )),
+        (paginated) => emit(
+          MyGroupsLoaded(
+            groups: paginated.groups,
+            currentPage: paginated.currentPage,
+            totalPages: paginated.totalPages,
+            totalCount: paginated.totalCount,
+            hasNextPage: paginated.hasNextPage,
+          ),
+        ),
       );
     }
   }
@@ -162,14 +170,16 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
 
       result.fold(
         (failure) => emit(DeliveryError(message: failure.message)),
-        (paginated) => emit(currentState.copyWith(
-          records: [...currentState.records, ...paginated.records],
-          currentPage: paginated.currentPage,
-          totalPages: paginated.totalPages,
-          totalCount: paginated.totalCount,
-          hasNextPage: paginated.hasNextPage,
-          isLoadingMore: false,
-        )),
+        (paginated) => emit(
+          currentState.copyWith(
+            records: [...currentState.records, ...paginated.records],
+            currentPage: paginated.currentPage,
+            totalPages: paginated.totalPages,
+            totalCount: paginated.totalCount,
+            hasNextPage: paginated.hasNextPage,
+            isLoadingMore: false,
+          ),
+        ),
       );
     } else {
       emit(const DeliveryLoading(message: 'Đang tải lịch sử giao hàng...'));
@@ -184,13 +194,15 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
 
       result.fold(
         (failure) => emit(DeliveryError(message: failure.message)),
-        (paginated) => emit(DeliveryHistoryLoaded(
-          records: paginated.records,
-          currentPage: paginated.currentPage,
-          totalPages: paginated.totalPages,
-          totalCount: paginated.totalCount,
-          hasNextPage: paginated.hasNextPage,
-        )),
+        (paginated) => emit(
+          DeliveryHistoryLoaded(
+            records: paginated.records,
+            currentPage: paginated.currentPage,
+            totalPages: paginated.totalPages,
+            totalCount: paginated.totalCount,
+            hasNextPage: paginated.hasNextPage,
+          ),
+        ),
       );
     }
   }
@@ -209,7 +221,7 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
     );
 
     result.fold(
-      (failure) => emit(DeliveryError(message: failure.message)),
+      (failure) => emit(DeliveryActionError(message: failure.message)),
       (group) => emit(DeliveryGroupAccepted(group: group)),
     );
   }
@@ -226,7 +238,7 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
     );
 
     result.fold(
-      (failure) => emit(DeliveryError(message: failure.message)),
+      (failure) => emit(DeliveryActionError(message: failure.message)),
       (group) => emit(DeliveryStarted(group: group)),
     );
   }
@@ -240,7 +252,7 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
     final result = await _repository.completeDeliveryGroup(event.groupId);
 
     result.fold(
-      (failure) => emit(DeliveryError(message: failure.message)),
+      (failure) => emit(DeliveryActionError(message: failure.message)),
       (group) => emit(DeliveryGroupCompleted(group: group)),
     );
   }
@@ -258,8 +270,8 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
     );
 
     result.fold(
-      (failure) => emit(DeliveryError(message: failure.message)),
-      (record) => emit(DeliveryConfirmed(record: record)),
+      (failure) => emit(DeliveryActionError(message: failure.message)),
+      (order) => emit(DeliveryConfirmed(order: order)),
     );
   }
 
@@ -276,24 +288,18 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
     );
 
     result.fold(
-      (failure) => emit(DeliveryError(message: failure.message)),
-      (record) => emit(DeliveryFailureReported(record: record)),
+      (failure) => emit(DeliveryActionError(message: failure.message)),
+      (order) => emit(DeliveryFailureReported(order: order)),
     );
   }
 
   // ============== UI HANDLERS ==============
 
-  void _onClearError(
-    ClearDeliveryError event,
-    Emitter<DeliveryState> emit,
-  ) {
+  void _onClearError(ClearDeliveryError event, Emitter<DeliveryState> emit) {
     emit(const DeliveryInitial());
   }
 
-  void _onReset(
-    ResetDeliveryState event,
-    Emitter<DeliveryState> emit,
-  ) {
+  void _onReset(ResetDeliveryState event, Emitter<DeliveryState> emit) {
     emit(const DeliveryInitial());
   }
 }

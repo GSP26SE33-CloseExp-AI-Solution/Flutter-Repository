@@ -14,7 +14,12 @@ abstract class DeliveryEvent extends Equatable {
 
 /// Load available delivery groups
 class LoadAvailableGroups extends DeliveryEvent {
-  const LoadAvailableGroups();
+  final DateTime? deliveryDate;
+
+  const LoadAvailableGroups({this.deliveryDate});
+
+  @override
+  List<Object?> get props => [deliveryDate];
 }
 
 /// Load my delivery groups (assigned to current staff)
@@ -22,17 +27,19 @@ class LoadMyGroups extends DeliveryEvent {
   final int page;
   final int pageSize;
   final String? status;
+  final DateTime? deliveryDate;
   final bool refresh;
 
   const LoadMyGroups({
     this.page = 1,
     this.pageSize = 10,
     this.status,
+    this.deliveryDate,
     this.refresh = false,
   });
 
   @override
-  List<Object?> get props => [page, pageSize, status, refresh];
+  List<Object?> get props => [page, pageSize, status, deliveryDate, refresh];
 }
 
 /// Load delivery group details
@@ -79,7 +86,14 @@ class LoadDeliveryHistory extends DeliveryEvent {
   });
 
   @override
-  List<Object?> get props => [page, pageSize, refresh, fromDate, toDate, status];
+  List<Object?> get props => [
+    page,
+    pageSize,
+    refresh,
+    fromDate,
+    toDate,
+    status,
+  ];
 }
 
 // ============== ACTION EVENTS ==============
@@ -119,17 +133,19 @@ class CompleteDeliveryGroup extends DeliveryEvent {
 /// Confirm delivery for an order
 class ConfirmDelivery extends DeliveryEvent {
   final String orderId;
+  final String? proofImagePath;
   final String? proofImageUrl;
   final String? notes;
 
   const ConfirmDelivery({
     required this.orderId,
+    this.proofImagePath,
     this.proofImageUrl,
     this.notes,
   });
 
   @override
-  List<Object?> get props => [orderId, proofImageUrl, notes];
+  List<Object?> get props => [orderId, proofImagePath, proofImageUrl, notes];
 }
 
 /// Report delivery failure

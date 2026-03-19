@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import '../../domain/entities/delivery_group.dart';
 
-/// Reusable Delivery Group Card Widget
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_typography.dart';
+import '../../domain/entities/delivery_group.dart';
+import 'common_widgets.dart';
+import 'status_badges.dart';
+
+/// Delivery Group Card — matches Screen 1 Order Card spec.
 class DeliveryGroupCard extends StatelessWidget {
   final DeliveryGroupSummary group;
   final VoidCallback? onTap;
@@ -23,190 +27,347 @@ class DeliveryGroupCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('dd/MM');
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: AppColors.cardBorder, width: 1.18),
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.10),
+              blurRadius: 6,
+              offset: const Offset(0, 4),
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Text(
-                      group.groupCode,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                  // ── Header row
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Gradient icon box
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [
+                              AppColors.headerGradientStart,
+                              AppColors.headerGradientEnd,
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const Icon(
+                          Icons.local_shipping,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+
+                      // Group code + status badges
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              group.groupCode,
+                              style: AppTypography.header2.copyWith(
+                                fontFamily: 'DM Sans',
+                                fontSize: 18,
+                                color: AppColors.textPrimary,
+                                letterSpacing: -0.54,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                _Pill(
+                                  text: '${group.totalOrders} đơn hàng',
+                                  background: const Color(0xFFFFE2E2),
+                                  textColor: const Color(0xFFE7000B),
+                                ),
+                                if (group.pendingOrders > 0) ...[
+                                  const SizedBox(width: 6),
+                                  _Pill(
+                                    text: '${group.pendingOrders} chờ giao',
+                                    background: const Color(0xFFFFEDD4),
+                                    textColor: const Color(0xFFF44900),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const Icon(
+                        Icons.chevron_right,
+                        size: 24,
+                        color: AppColors.textSecondary,
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // ── Info chips
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _InfoChip(
+                          label: 'Khu vực',
+                          value: group.deliveryArea,
+                          valueFontSize: 14,
+                          bold: false,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _InfoChip(
+                          label: 'Khung giờ',
+                          value: group.timeSlotDisplay,
+                          valueFontSize: 14,
+                          bold: true,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // ── Completed progress
+                  if (group.totalOrders > 0) ...[
+                    const SizedBox(height: 12),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: group.completedOrders / group.totalOrders,
+                        backgroundColor: AppColors.cardBorder,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          group.completedOrders == group.totalOrders
+                              ? AppColors.successGradientStart
+                              : AppColors.headerGradientEnd,
+                        ),
+                        minHeight: 6,
                       ),
                     ),
-                  ),
-                  _buildStatusBadge(group.status),
+                  ],
+
+                  // ── Action buttons
+                  if (showAcceptButton && group.isAvailable && onAccept != null) ...[
+                    const SizedBox(height: 12),
+                    AppGradientButton(
+                      onPressed: onAccept,
+                      child: Text(
+                        'Nhận đơn',
+                        style: AppTypography.header3.copyWith(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.14,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+
+                  if (group.isAssigned && onStart != null) ...[
+                    const SizedBox(height: 12),
+                    _SuccessGradientButton(
+                      onPressed: onStart!,
+                      label: 'Bắt đầu giao',
+                    ),
+                  ],
+
+                  if (group.isInProgress &&
+                      group.pendingOrders == 0 &&
+                      onComplete != null) ...[
+                    const SizedBox(height: 12),
+                    AppGradientButton(
+                      onPressed: onComplete,
+                      child: Text(
+                        'Hoàn thành',
+                        style: AppTypography.header3.copyWith(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.14,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
+            ),
 
-              const Divider(height: 16),
-
-              // Info Rows
-              _buildInfoRow(
-                Icons.calendar_today,
-                dateFormat.format(group.deliveryDate),
+            // ── Footer
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: const BoxDecoration(
+                border: Border(
+                  top: BorderSide(color: Color(0xFFE5E7EB)),
+                ),
+                borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
               ),
-              _buildInfoRow(Icons.access_time, group.timeSlotDisplay),
-              _buildInfoRow(Icons.location_on, group.deliveryArea),
-              _buildInfoRow(Icons.local_shipping, group.deliveryType),
-
-              const Divider(height: 16),
-
-              // Stats Row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildStatItem('Tổng', group.totalOrders, Colors.blue),
-                  _buildStatItem('Xong', group.completedOrders, Colors.green),
-                  _buildStatItem('Còn', group.pendingOrders, Colors.orange),
-                ],
-              ),
-
-              // Progress Bar
-              const SizedBox(height: 12),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: group.totalOrders > 0
-                      ? group.completedOrders / group.totalOrders
-                      : 0,
-                  backgroundColor: Colors.grey[200],
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    group.completedOrders == group.totalOrders
-                        ? Colors.green
-                        : Colors.blue,
-                  ),
-                  minHeight: 6,
+              child: Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DeliveryGroupStatusBadge(status: group.status, compact: true),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Nhấn để xem chi tiết đơn hàng',
+                      style: AppTypography.header3.copyWith(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-
-              // Action Buttons
-              if (showAcceptButton && group.isAvailable && onAccept != null) ...[
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: onAccept,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                    ),
-                    child: const Text('Nhận đơn'),
-                  ),
-                ),
-              ],
-
-              if (group.isAssigned && onStart != null) ...[
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: onStart,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                    ),
-                    child: const Text('Bắt đầu giao'),
-                  ),
-                ),
-              ],
-
-              if (group.isInProgress &&
-                  group.pendingOrders == 0 &&
-                  onComplete != null) ...[
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: onComplete,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                    ),
-                    child: const Text('Hoàn thành'),
-                  ),
-                ),
-              ],
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildStatusBadge(DeliveryGroupStatus status) {
-    Color color;
-    switch (status) {
-      case DeliveryGroupStatus.pending:
-        color = Colors.blue;
-      case DeliveryGroupStatus.assigned:
-        color = Colors.orange;
-      case DeliveryGroupStatus.inTransit:
-        color = Colors.purple;
-      case DeliveryGroupStatus.completed:
-        color = Colors.green;
-    }
+// ── Private helpers
 
+class _Pill extends StatelessWidget {
+  final String text;
+  final Color background;
+  final Color textColor;
+
+  const _Pill({
+    required this.text,
+    required this.background,
+    required this.textColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color),
+        color: background,
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
-        status.displayName,
-        style: TextStyle(
-          color: color,
+        text,
+        style: AppTypography.bodyRegular1.copyWith(
+          fontWeight: FontWeight.w700,
           fontSize: 12,
-          fontWeight: FontWeight.w600,
+          color: textColor,
         ),
       ),
     );
   }
+}
 
-  Widget _buildInfoRow(IconData icon, String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
+class _InfoChip extends StatelessWidget {
+  final String label;
+  final String value;
+  final double valueFontSize;
+  final bool bold;
+
+  const _InfoChip({
+    required this.label,
+    required this.value,
+    this.valueFontSize = 16,
+    this.bold = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.cardSurface,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 16, color: Colors.grey[600]),
-          const SizedBox(width: 8),
-          Text(text, style: TextStyle(color: Colors.grey[700])),
+          Text(
+            label,
+            style: AppTypography.bodyRegular1.copyWith(
+              fontSize: 12,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: TextStyle(
+              fontFamily: 'DM Sans',
+              fontSize: valueFontSize,
+              fontWeight: bold ? FontWeight.w700 : FontWeight.w400,
+              color: AppColors.textPrimary,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildStatItem(String label, int value, Color color) {
-    return Column(
-      children: [
-        Text(
-          value.toString(),
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: color,
+class _SuccessGradientButton extends StatelessWidget {
+  final VoidCallback onPressed;
+  final String label;
+
+  const _SuccessGradientButton({required this.onPressed, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 50,
+      width: double.infinity,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [AppColors.successGradientStart, AppColors.successGradientEnd],
+          ),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          child: InkWell(
+            onTap: onPressed,
+            borderRadius: BorderRadius.circular(20),
+            child: Center(
+              child: Text(
+                label,
+                style: AppTypography.header3.copyWith(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.14,
+                  color: Colors.white,
+                ),
+              ),
+            ),
           ),
         ),
-        Text(
-          label,
-          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-        ),
-      ],
+      ),
     );
   }
 }

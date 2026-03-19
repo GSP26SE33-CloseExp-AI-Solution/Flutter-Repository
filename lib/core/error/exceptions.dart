@@ -1,8 +1,3 @@
-// Custom Exceptions for CloseExp Delivery Staff App
-//
-// These exceptions are thrown in the data layer and caught in repositories
-// to be converted to Failures.
-
 /// Base Exception class
 class AppException implements Exception {
   final String message;

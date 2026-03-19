@@ -14,8 +14,17 @@ abstract class AuthRepository {
     required String password,
   });
 
-  /// Logout the current user
+  /// Refresh access token using refresh token
+  Future<Either<Failure, AuthResult>> refreshToken();
+
+  /// Logout the current user (local only)
   Future<Either<Failure, void>> logout();
+
+  /// Logout with refresh token (remote + local)
+  Future<Either<Failure, void>> logoutWithToken();
+
+  /// Logout from all devices
+  Future<Either<Failure, void>> logoutAll();
 
   /// Get cached user from local storage
   Future<Either<Failure, User>> getCachedUser();
@@ -25,4 +34,18 @@ abstract class AuthRepository {
 
   /// Get the current access token
   Future<Either<Failure, String>> getAccessToken();
+
+  /// Get the current refresh token
+  Future<Either<Failure, String>> getRefreshToken();
+
+  // ============== USER PROFILE ==============
+
+  /// Get current user profile from server
+  Future<Either<Failure, User>> getCurrentUser();
+
+  /// Update current user profile
+  Future<Either<Failure, User>> updateProfile({
+    String? fullName,
+    String? phone,
+  });
 }

@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../../core/router/app_router.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../domain/entities/delivery_group.dart';
 import '../bloc/delivery_bloc.dart';
 import '../bloc/delivery_event.dart';
 import '../bloc/delivery_state.dart';
-import '../widgets/delivery_group_card.dart';
+import '../widgets/widgets.dart';
 
-/// Available Groups Page - shows delivery groups available to accept
+/// Screen 1 — Available Groups: shows delivery groups available to accept.
 class AvailableGroupsPage extends StatefulWidget {
   const AvailableGroupsPage({super.key});
 
@@ -29,125 +31,81 @@ class _AvailableGroupsPageState extends State<AvailableGroupsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Đơn hàng có sẵn'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadGroups,
-            tooltip: 'Làm mới',
+    return BlocConsumer<DeliveryBloc, DeliveryState>(
+      listener: _handleStateChange,
+      builder: (context, state) {
+        final subtitle = state is AvailableGroupsLoaded
+            ? '${state.groups.length} đơn hàng đang chờ'
+            : null;
+
+        return Scaffold(
+          appBar: GradientAppBar(
+            title: 'Đơn hàng cần giao',
+            subtitle: subtitle,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: _loadGroups,
+                tooltip: 'Làm mới',
+              ),
+            ],
           ),
-        ],
-      ),
-      body: BlocConsumer<DeliveryBloc, DeliveryState>(
-        listener: (context, state) {
-          if (state is DeliveryGroupAccepted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Đã nhận đơn ${state.group.groupCode}'),
-                backgroundColor: Colors.green,
-              ),
-            );
-            // Reload available groups
-            _loadGroups();
-          } else if (state is DeliveryError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          if (state is DeliveryLoading) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Đang tải...'),
-                ],
-              ),
-            );
-          }
-
-          if (state is AvailableGroupsLoaded) {
-            if (state.isEmpty) {
-              return _buildEmptyState();
-            }
-            return _buildGroupsList(state.groups);
-          }
-
-          if (state is DeliveryError) {
-            return _buildErrorState(state.message);
-          }
-
-          return const SizedBox.shrink();
-        },
-      ),
+          body: _buildBody(context, state),
+        );
+      },
     );
   }
 
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.inbox_outlined, size: 80, color: Colors.grey[400]),
-          const SizedBox(height: 16),
-          Text(
-            'Không có đơn hàng có sẵn',
-            style: TextStyle(fontSize: 18, color: Colors.grey[600]),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Hãy quay lại sau để kiểm tra đơn mới',
-            style: TextStyle(color: Colors.grey[500]),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: _loadGroups,
-            icon: const Icon(Icons.refresh),
-            label: const Text('Làm mới'),
-          ),
-        ],
-      ),
-    );
+  void _handleStateChange(BuildContext context, DeliveryState state) {
+    if (state is DeliveryGroupAccepted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Đã nhận đơn ${state.group.groupCode}'),
+          backgroundColor: AppColors.successGradientEnd,
+        ),
+      );
+      _loadGroups();
+    } else if (state is DeliveryError) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(state.message), backgroundColor: AppColors.error),
+      );
+    } else if (state is DeliveryActionError) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(state.message), backgroundColor: AppColors.error),
+      );
+      _loadGroups();
+    }
   }
 
-  Widget _buildErrorState(String message) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.error_outline, size: 80, color: Colors.red[300]),
-          const SizedBox(height: 16),
-          Text(
-            message,
-            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: _loadGroups,
-            icon: const Icon(Icons.refresh),
-            label: const Text('Thử lại'),
-          ),
-        ],
-      ),
-    );
+  Widget _buildBody(BuildContext context, DeliveryState state) {
+    if (state is DeliveryLoading) {
+      return const DeliveryLoadingState(message: 'Đang tải...');
+    }
+
+    if (state is AvailableGroupsLoaded) {
+      if (state.isEmpty) {
+        return DeliveryEmptyState(
+          icon: Icons.inbox_outlined,
+          title: 'Không có đơn hàng có sẵn',
+          subtitle: 'Hãy quay lại sau để kiểm tra đơn mới',
+          actionLabel: 'Làm mới',
+          onAction: _loadGroups,
+        );
+      }
+      return _buildGroupsList(state.groups);
+    }
+
+    if (state is DeliveryError) {
+      return DeliveryErrorState(message: state.message, onRetry: _loadGroups);
+    }
+
+    return const SizedBox.shrink();
   }
 
   Widget _buildGroupsList(List<DeliveryGroupSummary> groups) {
     return RefreshIndicator(
-      onRefresh: () async {
-        _loadGroups();
-      },
+      color: AppColors.headerGradientEnd,
+      onRefresh: () async => _loadGroups(),
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: groups.length,
@@ -155,43 +113,30 @@ class _AvailableGroupsPageState extends State<AvailableGroupsPage> {
           final group = groups[index];
           return DeliveryGroupCard(
             group: group,
-            onTap: () => context.push(
-              Routes.deliveryGroupDetails(group.deliveryGroupId),
-            ),
-            onAccept: () => _showAcceptDialog(group),
+            onTap: () =>
+                context.push(Routes.deliveryGroupDetails(group.deliveryGroupId)),
+            onAccept: () => _handleAcceptGroup(group),
           );
         },
       ),
     );
   }
 
-  void _showAcceptDialog(DeliveryGroupSummary group) {
-    showDialog(
+  void _handleAcceptGroup(DeliveryGroupSummary group) async {
+    final confirmed = await showDeliveryConfirmDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Xác nhận nhận đơn'),
-        content: Text(
-          'Bạn có chắc muốn nhận nhóm giao "${group.groupCode}"?\n\n'
+      title: 'Xác nhận nhận đơn',
+      content: 'Bạn có chắc muốn nhận nhóm giao "${group.groupCode}"?\n\n'
           '• Khu vực: ${group.deliveryArea}\n'
           '• Thời gian: ${group.timeSlotDisplay}\n'
           '• Số đơn: ${group.totalOrders}',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Hủy'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.read<DeliveryBloc>().add(
-                AcceptDeliveryGroup(groupId: group.deliveryGroupId),
-              );
-            },
-            child: const Text('Nhận đơn'),
-          ),
-        ],
-      ),
+      confirmLabel: 'Nhận đơn',
+      confirmColor: AppColors.headerGradientEnd,
     );
+    if (confirmed == true && mounted) {
+      context
+          .read<DeliveryBloc>()
+          .add(AcceptDeliveryGroup(groupId: group.deliveryGroupId));
+    }
   }
 }

@@ -14,6 +14,10 @@ class DeliveryGroup extends Equatable {
   final String timeSlotDisplay;
   final String deliveryType;
   final String deliveryArea;
+  /// Geographic center of the delivery group area (from BE CenterLatitude)
+  final double? centerLatitude;
+  /// Geographic center of the delivery group area (from BE CenterLongitude)
+  final double? centerLongitude;
   final DeliveryGroupStatus status;
   final int totalOrders;
   final int completedOrders;
@@ -33,6 +37,8 @@ class DeliveryGroup extends Equatable {
     required this.timeSlotDisplay,
     required this.deliveryType,
     required this.deliveryArea,
+    this.centerLatitude,
+    this.centerLongitude,
     required this.status,
     required this.totalOrders,
     required this.completedOrders,
@@ -76,6 +82,8 @@ class DeliveryGroup extends Equatable {
     timeSlotDisplay,
     deliveryType,
     deliveryArea,
+    centerLatitude,
+    centerLongitude,
     status,
     totalOrders,
     completedOrders,
@@ -148,6 +156,10 @@ class DeliveryGroupSummary extends Equatable {
   final String timeSlotDisplay;
   final String deliveryType;
   final String deliveryArea;
+  /// Geographic center of the delivery group area (from BE CenterLatitude)
+  final double? centerLatitude;
+  /// Geographic center of the delivery group area (from BE CenterLongitude)
+  final double? centerLongitude;
   final DeliveryGroupStatus status;
   final int totalOrders;
   final int completedOrders;
@@ -159,6 +171,8 @@ class DeliveryGroupSummary extends Equatable {
     required this.timeSlotDisplay,
     required this.deliveryType,
     required this.deliveryArea,
+    this.centerLatitude,
+    this.centerLongitude,
     required this.status,
     required this.totalOrders,
     required this.completedOrders,
@@ -186,6 +200,8 @@ class DeliveryGroupSummary extends Equatable {
     timeSlotDisplay,
     deliveryType,
     deliveryArea,
+    centerLatitude,
+    centerLongitude,
     status,
     totalOrders,
     completedOrders,

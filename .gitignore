@@ -123,9 +123,9 @@ app.*.symbols
 *.pem
 *.key
 
-# Firebase (Optional: uncomment if you want to hide project IDs)
-# **/android/app/google-services.json
-# **/ios/Runner/GoogleService-Info.plist
+mapbox.dev.json
+mapbox.*.json
+!mapbox.example.json
 
 # IDEs
 .idea/

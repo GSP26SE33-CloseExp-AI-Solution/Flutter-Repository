@@ -14,6 +14,7 @@ class NetworkInfoImpl implements NetworkInfo {
   Future<bool> get isConnected async {
     // TODO: Implement actual network check with connectivity_plus package
     // For now, always return true and let Dio handle network errors
+    
     return true;
   }
 }

@@ -147,6 +147,7 @@ class _AuthInterceptor extends QueuedInterceptor {
     '/auth/register',
     '/auth/refresh-token',
     '/auth/forgot-password',
+    '/auth/resend-otp',
     '/auth/verify-otp',
     '/auth/reset-password',
     '/auth/google-login',
@@ -209,19 +210,52 @@ class _AuthInterceptor extends QueuedInterceptor {
     }
 
     // Convert DioException to custom exceptions
+    // NOTE: Must use handler.reject(), NOT throw. Throwing inside an async
+    // interceptor does NOT propagate through Dio pipeline correctly.
     switch (err.type) {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
-        throw const NetworkException(message: 'Kết nối quá thời gian chờ');
+        return handler.reject(
+          DioException(
+            requestOptions: err.requestOptions,
+            error: const NetworkException(message: 'Kết nối quá thời gian chờ'),
+            type: err.type,
+          ),
+        );
       case DioExceptionType.connectionError:
-        throw const NetworkException();
+        return handler.reject(
+          DioException(
+            requestOptions: err.requestOptions,
+            error: const NetworkException(
+              message: 'Không thể kết nối đến máy chủ',
+            ),
+            type: DioExceptionType.connectionError,
+          ),
+        );
       case DioExceptionType.badResponse:
-        _handleBadResponse(err.response);
+        try {
+          _handleBadResponse(err.response);
+        } catch (e) {
+          return handler.reject(
+            DioException(
+              requestOptions: err.requestOptions,
+              error: e,
+              type: DioExceptionType.badResponse,
+              response: err.response,
+            ),
+          );
+        }
         break;
       default:
-        throw ServerException(
-          message: err.message ?? 'Đã xảy ra lỗi không xác định',
+        return handler.reject(
+          DioException(
+            requestOptions: err.requestOptions,
+            error: ServerException(
+              message: err.message ?? 'Đã xảy ra lỗi không xác định',
+            ),
+            type: err.type,
+          ),
         );
     }
     handler.next(err);

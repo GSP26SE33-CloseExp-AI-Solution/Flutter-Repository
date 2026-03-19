@@ -13,6 +13,7 @@ class LogoutUseCase implements UseCase<void, NoParams> {
 
   @override
   Future<Either<Failure, void>> call(NoParams params) async {
-    return await repository.logout();
+    // Revoke refresh token on server when possible, then clear local auth data.
+    return await repository.logoutWithToken();
   }
 }

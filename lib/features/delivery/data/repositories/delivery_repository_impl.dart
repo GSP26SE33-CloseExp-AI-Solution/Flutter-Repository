@@ -22,14 +22,17 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
   });
 
   @override
-  Future<Either<Failure, List<DeliveryGroupSummary>>>
-  getAvailableGroups() async {
+  Future<Either<Failure, List<DeliveryGroupSummary>>> getAvailableGroups({
+    DateTime? deliveryDate,
+  }) async {
     if (!await networkInfo.isConnected) {
       return const Left(NetworkFailure());
     }
 
     try {
-      final groups = await remoteDataSource.getAvailableGroups();
+      final groups = await remoteDataSource.getAvailableGroups(
+        deliveryDate: deliveryDate,
+      );
       return Right(groups);
     } on UnauthorizedException {
       return const Left(UnauthorizedFailure());
@@ -49,6 +52,7 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
     int page = 1,
     int pageSize = 10,
     String? status,
+    DateTime? deliveryDate,
   }) async {
     if (!await networkInfo.isConnected) {
       return const Left(NetworkFailure());
@@ -59,6 +63,7 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
         page: page,
         pageSize: pageSize,
         status: status,
+        deliveryDate: deliveryDate,
       );
       return Right(
         PaginatedDeliveryGroups(
@@ -206,7 +211,7 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
   }
 
   @override
-  Future<Either<Failure, DeliveryRecord>> confirmDelivery(
+  Future<Either<Failure, DeliveryOrder>> confirmDelivery(
     String orderId, {
     String? proofImageUrl,
     String? notes,
@@ -216,12 +221,12 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
     }
 
     try {
-      final record = await remoteDataSource.confirmDelivery(
+      final order = await remoteDataSource.confirmDelivery(
         orderId,
         proofImageUrl: proofImageUrl,
         notes: notes,
       );
-      return Right(record);
+      return Right(order);
     } on UnauthorizedException {
       return const Left(UnauthorizedFailure());
     } on ForbiddenException {
@@ -236,7 +241,7 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
   }
 
   @override
-  Future<Either<Failure, DeliveryRecord>> reportDeliveryFailure(
+  Future<Either<Failure, DeliveryOrder>> reportDeliveryFailure(
     String orderId, {
     required String failureReason,
     String? notes,
@@ -246,12 +251,12 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
     }
 
     try {
-      final record = await remoteDataSource.reportDeliveryFailure(
+      final order = await remoteDataSource.reportDeliveryFailure(
         orderId,
         failureReason: failureReason,
         notes: notes,
       );
-      return Right(record);
+      return Right(order);
     } on UnauthorizedException {
       return const Left(UnauthorizedFailure());
     } on ForbiddenException {

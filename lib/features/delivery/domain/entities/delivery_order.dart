@@ -13,13 +13,20 @@ class DeliveryOrder extends Equatable {
   final DateTime orderDate;
   final String customerName;
   final String customerPhone;
+  /// Home delivery: maps from BE `addressLine` (CustomerAddress.AddressLine)
   final String? deliveryAddress;
+  /// Pickup: maps from BE `collectionPointName` (CollectionPoint.Name)
   final String? pickupPointName;
+  /// Not returned by BE in DeliveryOrderResponseDto (always null from API)
   final String? pickupPointAddress;
   final String? deliveryNote;
   final String timeSlotDisplay;
   final int totalItems;
   final List<DeliveryOrderItem> items;
+  /// GPS coordinate of delivery/pickup location (from BE Latitude)
+  final double? latitude;
+  /// GPS coordinate of delivery/pickup location (from BE Longitude)
+  final double? longitude;
 
   const DeliveryOrder({
     required this.orderId,
@@ -38,6 +45,8 @@ class DeliveryOrder extends Equatable {
     required this.timeSlotDisplay,
     required this.totalItems,
     this.items = const [],
+    this.latitude,
+    this.longitude,
   });
 
   /// Check if this is a home delivery
@@ -92,6 +101,8 @@ class DeliveryOrder extends Equatable {
     timeSlotDisplay,
     totalItems,
     items,
+    latitude,
+    longitude,
   ];
 }
 
@@ -211,6 +222,10 @@ class DeliveryRecord extends Equatable {
   final DeliveryOrderStatus status;
   final String? failureReason;
   final DateTime? deliveredAt;
+  /// GPS coordinate recorded at delivery time (from BE DeliveryLog.DeliveryLatitude)
+  final double? deliveryLatitude;
+  /// GPS coordinate recorded at delivery time (from BE DeliveryLog.DeliveryLongitude)
+  final double? deliveryLongitude;
 
   const DeliveryRecord({
     required this.deliveryId,
@@ -221,6 +236,8 @@ class DeliveryRecord extends Equatable {
     required this.status,
     this.failureReason,
     this.deliveredAt,
+    this.deliveryLatitude,
+    this.deliveryLongitude,
   });
 
   @override
@@ -233,5 +250,7 @@ class DeliveryRecord extends Equatable {
     status,
     failureReason,
     deliveredAt,
+    deliveryLatitude,
+    deliveryLongitude,
   ];
 }

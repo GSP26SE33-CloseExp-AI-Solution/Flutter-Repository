@@ -13,8 +13,7 @@ class User extends Equatable {
   final int roleId;
   final UserStatus status;
   final DateTime createdAt;
-  final DateTime updatedAt;
-  final MarketStaffInfo? marketStaffInfo;
+    final DateTime updatedAt;
 
   const User({
     required this.userId,
@@ -26,7 +25,6 @@ class User extends Equatable {
     required this.status,
     required this.createdAt,
     required this.updatedAt,
-    this.marketStaffInfo,
   });
 
   /// Check if user is a delivery staff
@@ -49,53 +47,10 @@ class User extends Equatable {
     status,
     createdAt,
     updatedAt,
-    marketStaffInfo,
   ];
 }
 
-/// Market Staff Info - nested entity for MarketStaff users
-/// Matches BE MarketStaffInfoDto structure
-class MarketStaffInfo extends Equatable {
-  final String marketStaffId;
-  final String position;
-  final DateTime joinedAt;
-  final SupermarketBasicInfo? supermarket;
 
-  const MarketStaffInfo({
-    required this.marketStaffId,
-    required this.position,
-    required this.joinedAt,
-    this.supermarket,
-  });
-
-  /// Get supermarket ID from nested supermarket
-  String? get supermarketId => supermarket?.supermarketId;
-
-  /// Get supermarket name from nested supermarket
-  String? get supermarketName => supermarket?.name;
-
-  @override
-  List<Object?> get props => [marketStaffId, position, joinedAt, supermarket];
-}
-
-/// Supermarket Basic Info - nested entity
-/// Matches BE SupermarketBasicInfoDto structure
-class SupermarketBasicInfo extends Equatable {
-  final String supermarketId;
-  final String name;
-  final String address;
-  final String contactPhone;
-
-  const SupermarketBasicInfo({
-    required this.supermarketId,
-    required this.name,
-    required this.address,
-    required this.contactPhone,
-  });
-
-  @override
-  List<Object?> get props => [supermarketId, name, address, contactPhone];
-}
 
 /// User Status Enum matching backend UserState
 enum UserStatus {
