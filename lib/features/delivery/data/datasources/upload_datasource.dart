@@ -39,7 +39,9 @@ class UploadDataSourceImpl implements UploadDataSource {
       });
 
       final response = await _dio.post(
-        ApiConstants.upload,
+        // Use /upload/test: accepts only a file, returns { key, url }
+        // /upload requires productId (product image upload — wrong for delivery proof)
+        ApiConstants.uploadTest,
         data: formData,
         options: Options(contentType: 'multipart/form-data'),
       );
@@ -68,7 +70,7 @@ class UploadDataSourceImpl implements UploadDataSource {
       });
 
       final response = await _dio.post(
-        ApiConstants.upload,
+        ApiConstants.uploadTest,
         data: formData,
         options: Options(contentType: 'multipart/form-data'),
       );
