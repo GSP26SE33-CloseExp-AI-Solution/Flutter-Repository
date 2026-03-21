@@ -11,7 +11,7 @@ import '../widgets/widgets.dart';
 /// My Deliveries Page - shows delivery groups assigned to current staff
 class MyDeliveriesPage extends StatefulWidget {
   const MyDeliveriesPage({super.key});
-
+  // TODO: Fix color the match app theme
   @override
   State<MyDeliveriesPage> createState() => _MyDeliveriesPageState();
 }
@@ -51,11 +51,8 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
         _scrollController.position.pixels >=
             _scrollController.position.maxScrollExtent - 200) {
       context.read<DeliveryBloc>().add(
-            LoadMyGroups(
-              page: state.currentPage + 1,
-              status: _getCurrentStatus(),
-            ),
-          );
+        LoadMyGroups(page: state.currentPage + 1, status: _getCurrentStatus()),
+      );
     }
   }
 
@@ -74,8 +71,8 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
 
   void _loadGroups({bool refresh = false}) {
     context.read<DeliveryBloc>().add(
-          LoadMyGroups(status: _getCurrentStatus(), refresh: refresh),
-        );
+      LoadMyGroups(status: _getCurrentStatus(), refresh: refresh),
+    );
   }
 
   @override
@@ -195,7 +192,8 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
             onStart: group.status == DeliveryGroupStatus.assigned
                 ? () => _handleStartDelivery(group)
                 : null,
-            onComplete: group.status == DeliveryGroupStatus.inTransit &&
+            onComplete:
+                group.status == DeliveryGroupStatus.inTransit &&
                     group.pendingOrders == 0
                 ? () => _handleCompleteGroup(group)
                 : null,
@@ -209,15 +207,16 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
     final confirmed = await showDeliveryConfirmDialog(
       context: context,
       title: 'Bắt đầu giao hàng',
-      content: 'Bắt đầu giao hàng cho nhóm "${group.groupCode}"?\n\n'
+      content:
+          'Bắt đầu giao hàng cho nhóm "${group.groupCode}"?\n\n'
           '• Số đơn: ${group.totalOrders}\n'
           '• Khu vực: ${group.deliveryArea}',
       confirmLabel: 'Bắt đầu',
     );
     if (confirmed == true && mounted) {
       context.read<DeliveryBloc>().add(
-            StartDelivery(groupId: group.deliveryGroupId),
-          );
+        StartDelivery(groupId: group.deliveryGroupId),
+      );
     }
   }
 
@@ -225,14 +224,15 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
     final confirmed = await showDeliveryConfirmDialog(
       context: context,
       title: 'Hoàn thành nhóm giao',
-      content: 'Xác nhận hoàn thành nhóm giao "${group.groupCode}"?\n\n'
+      content:
+          'Xác nhận hoàn thành nhóm giao "${group.groupCode}"?\n\n'
           '• Đã giao: ${group.completedOrders}/${group.totalOrders}',
       confirmLabel: 'Hoàn thành',
     );
     if (confirmed == true && mounted) {
       context.read<DeliveryBloc>().add(
-            CompleteDeliveryGroup(groupId: group.deliveryGroupId),
-          );
+        CompleteDeliveryGroup(groupId: group.deliveryGroupId),
+      );
     }
   }
 }

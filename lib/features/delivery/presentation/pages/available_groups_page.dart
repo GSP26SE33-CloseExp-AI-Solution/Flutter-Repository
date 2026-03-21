@@ -13,7 +13,7 @@ import '../widgets/widgets.dart';
 /// Screen 1 — Available Groups: shows delivery groups available to accept.
 class AvailableGroupsPage extends StatefulWidget {
   const AvailableGroupsPage({super.key});
-
+ // TODO: Fix color the match app theme
   @override
   State<AvailableGroupsPage> createState() => _AvailableGroupsPageState();
 }
