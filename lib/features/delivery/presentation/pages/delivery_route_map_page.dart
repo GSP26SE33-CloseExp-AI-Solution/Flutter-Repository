@@ -45,7 +45,11 @@ class DeliveryRouteMapPage extends StatelessWidget {
                     shape: const CircleBorder(),
                     elevation: 3,
                     child: IconButton(
-                      icon: const Icon(Icons.arrow_back, size: 24),
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        size: 24,
+                      ),
+                      color: AppColors.neutralDark,
                       onPressed: () => Navigator.pop(context),
                     ),
                   ),

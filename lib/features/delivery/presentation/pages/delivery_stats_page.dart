@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_typography.dart';
 import '../../domain/entities/delivery_stats.dart';
 import '../bloc/delivery_bloc.dart';
 import '../bloc/delivery_event.dart';
@@ -30,13 +33,12 @@ class _DeliveryStatsPageState extends State<DeliveryStatsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Thống kê giao hàng'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
+      appBar: GradientAppBar(
+        title: 'Thống kê giao hàng',
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
+            color: AppColors.headerGradientEnd,
             onPressed: _loadStats,
             tooltip: 'Làm mới',
           ),
@@ -67,6 +69,7 @@ class _DeliveryStatsPageState extends State<DeliveryStatsPage> {
 
   Widget _buildStatsContent(DeliveryStats stats) {
     return RefreshIndicator(
+      color: AppColors.headerGradientEnd,
       onRefresh: () async => _loadStats(),
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -79,28 +82,19 @@ class _DeliveryStatsPageState extends State<DeliveryStatsPage> {
             const SizedBox(height: 20),
 
             // Main stats cards
-            const Text(
-              'Tổng quan',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
+            Text('Tổng quan', style: AppTypography.subHeader),
             const SizedBox(height: 12),
             _buildOverviewCards(stats),
             const SizedBox(height: 20),
 
             // Order breakdown
-            const Text(
-              'Chi tiết đơn hàng',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
+            Text('Chi tiết đơn hàng', style: AppTypography.subHeader),
             const SizedBox(height: 12),
             _buildOrderBreakdown(stats),
             const SizedBox(height: 20),
 
             // Quick actions
-            const Text(
-              'Thao tác nhanh',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
+            Text('Thao tác nhanh', style: AppTypography.subHeader),
             const SizedBox(height: 12),
             _buildQuickActions(),
           ],
@@ -111,46 +105,62 @@ class _DeliveryStatsPageState extends State<DeliveryStatsPage> {
 
   Widget _buildStaffInfoCard(DeliveryStats stats) {
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 32,
-              backgroundColor: Colors.blue[100],
-              child: Icon(Icons.person, size: 36, color: Colors.blue[700]),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: AppColors.cardBorder),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+            child: Icon(Icons.person, size: 36, color: AppColors.primary),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  stats.deliveryStaffName,
+                  style: AppTypography.subHeader.copyWith(
+                    fontSize: 18,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Nhân viên giao hàng',
+                  style: AppTypography.header3.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                if (stats.lastDeliveryAt != null)
                   Text(
-                    stats.deliveryStaffName,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                    'Giao hàng gần nhất: ${dateFormat.format(stats.lastDeliveryAt!)}',
+                    style: AppTypography.bodyRegular1.copyWith(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Nhân viên giao hàng',
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                  if (stats.lastDeliveryAt != null)
-                    Text(
-                      'Giao hàng gần nhất: ${dateFormat.format(stats.lastDeliveryAt!)}',
-                      style: TextStyle(
-                        color: Colors.grey[500],
-                        fontSize: 12,
-                      ),
-                    ),
-                ],
-              ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -163,7 +173,7 @@ class _DeliveryStatsPageState extends State<DeliveryStatsPage> {
             'Nhóm giao hàng',
             stats.totalAssignedGroups.toString(),
             Icons.group_work,
-            Colors.blue,
+            AppColors.accent,
           ),
         ),
         const SizedBox(width: 12),
@@ -172,7 +182,7 @@ class _DeliveryStatsPageState extends State<DeliveryStatsPage> {
             'Tổng đơn hàng',
             stats.totalOrders.toString(),
             Icons.shopping_bag,
-            Colors.purple,
+            AppColors.primary,
           ),
         ),
         const SizedBox(width: 12),
@@ -181,79 +191,107 @@ class _DeliveryStatsPageState extends State<DeliveryStatsPage> {
             'Tỷ lệ thành công',
             stats.successRateDisplay,
             Icons.trending_up,
-            stats.completionRate >= 80 ? Colors.green : Colors.orange,
+            stats.completionRate >= 80
+                ? AppColors.successGradientStart
+                : AppColors.primaryGradientStart,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 32),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
+  Widget _buildStatCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: AppColors.cardBorder),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 32),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontFamily: 'DM Sans',
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: color,
             ),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
-              textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            title,
+            style: AppTypography.bodyRegular1.copyWith(
+              fontSize: 12,
+              color: AppColors.textSecondary,
             ),
-          ],
-        ),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildOrderBreakdown(DeliveryStats stats) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            _buildBreakdownRow(
-              'Hoàn thành',
-              stats.completedOrders,
-              stats.totalOrders,
-              Colors.green,
-            ),
-            const Divider(),
-            _buildBreakdownRow(
-              'Đang xử lý',
-              stats.pendingOrders,
-              stats.totalOrders,
-              Colors.orange,
-            ),
-            const Divider(),
-            _buildBreakdownRow(
-              'Đang giao',
-              stats.inTransitOrders,
-              stats.totalOrders,
-              Colors.blue,
-            ),
-            const Divider(),
-            _buildBreakdownRow(
-              'Thất bại',
-              stats.failedOrders,
-              stats.totalOrders,
-              Colors.red,
-            ),
-          ],
-        ),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: AppColors.cardBorder),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          _buildBreakdownRow(
+            'Hoàn thành',
+            stats.completedOrders,
+            stats.totalOrders,
+            AppColors.successGradientStart,
+          ),
+          const Divider(color: AppColors.cardBorder),
+          _buildBreakdownRow(
+            'Đang xử lý',
+            stats.pendingOrders,
+            stats.totalOrders,
+            AppColors.primaryGradientStart,
+          ),
+          const Divider(color: AppColors.cardBorder),
+          _buildBreakdownRow(
+            'Đang giao',
+            stats.inTransitOrders,
+            stats.totalOrders,
+            AppColors.accent,
+          ),
+          const Divider(color: AppColors.cardBorder),
+          _buildBreakdownRow(
+            'Thất bại',
+            stats.failedOrders,
+            stats.totalOrders,
+            AppColors.error,
+          ),
+        ],
       ),
     );
   }
@@ -274,11 +312,16 @@ class _DeliveryStatsPageState extends State<DeliveryStatsPage> {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(label),
+            child: Text(
+              label,
+              style: AppTypography.header3.copyWith(
+                color: AppColors.textPrimary,
+              ),
+            ),
           ),
           Text(
             '$count',
-            style: TextStyle(
+            style: AppTypography.header3.copyWith(
               fontWeight: FontWeight.bold,
               color: color,
             ),
@@ -288,7 +331,7 @@ class _DeliveryStatsPageState extends State<DeliveryStatsPage> {
             width: 100,
             child: LinearProgressIndicator(
               value: percentage / 100,
-              backgroundColor: Colors.grey[200],
+              backgroundColor: AppColors.cardBorder,
               valueColor: AlwaysStoppedAnimation<Color>(color),
             ),
           ),
@@ -297,9 +340,9 @@ class _DeliveryStatsPageState extends State<DeliveryStatsPage> {
             width: 50,
             child: Text(
               '${percentage.toStringAsFixed(1)}%',
-              style: TextStyle(
+              style: AppTypography.bodyRegular1.copyWith(
                 fontSize: 12,
-                color: Colors.grey[600],
+                color: AppColors.textSecondary,
               ),
               textAlign: TextAlign.right,
             ),
@@ -316,7 +359,7 @@ class _DeliveryStatsPageState extends State<DeliveryStatsPage> {
           'Xem lịch sử giao hàng',
           'Xem các đơn đã hoàn thành',
           Icons.history,
-          Colors.blue,
+          AppColors.accent,
           () => context.push('/delivery/history'),
         ),
         const SizedBox(height: 8),
@@ -324,7 +367,7 @@ class _DeliveryStatsPageState extends State<DeliveryStatsPage> {
           'Danh sách nhóm giao hàng',
           'Quản lý các nhóm đang giao',
           Icons.list_alt,
-          Colors.green,
+          AppColors.successGradientStart,
           () => context.push('/delivery'),
         ),
       ],
@@ -338,16 +381,46 @@ class _DeliveryStatsPageState extends State<DeliveryStatsPage> {
     Color color,
     VoidCallback onTap,
   ) {
-    return Card(
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: AppColors.cardBorder),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: ListTile(
         onTap: onTap,
-        leading: CircleAvatar(
-          backgroundColor: color.withValues(alpha: 0.1),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            shape: BoxShape.circle,
+          ),
           child: Icon(icon, color: color),
         ),
-        title: Text(title),
-        subtitle: Text(subtitle),
-        trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
+        title: Text(
+          title,
+          style: AppTypography.header3.copyWith(
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: AppTypography.bodyRegular1.copyWith(
+            color: AppColors.textSecondary,
+            fontSize: 13,
+          ),
+        ),
+        trailing: Icon(Icons.chevron_right, color: AppColors.textSecondary),
       ),
     );
   }

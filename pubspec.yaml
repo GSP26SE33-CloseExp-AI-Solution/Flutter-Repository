@@ -72,6 +72,7 @@ flutter:
     - assets/icons/
     - assets/icons/navigations/
     - assets/icons/icon_bottoms/
+    - assets/icons/qr_scan/
   fonts:
     - family: Be Vietnam Pro
       fonts:

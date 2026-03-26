@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_typography.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_event.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 
-/// Home Page - Presentation Layer
-///
-/// Main home screen for authenticated delivery staff.
-/// This is a placeholder - you'll add delivery features here.
+/// Home Page - main home screen for authenticated delivery staff.
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
@@ -20,6 +20,19 @@ class HomePage extends StatelessWidget {
 
         return Scaffold(
           appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            flexibleSpace: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.headerGradientStart,
+                    AppColors.headerGradientEnd,
+                  ],
+                ),
+              ),
+            ),
             title: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -40,14 +53,20 @@ class HomePage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 10),
-                const Text('Trang chủ'),
+                Text(
+                  'Trang chủ',
+                  style: AppTypography.header1.copyWith(
+                    fontSize: 20,
+                    color: Colors.white,
+                    letterSpacing: -0.60,
+                  ),
+                ),
               ],
             ),
-            backgroundColor: Colors.blue,
-            foregroundColor: Colors.white,
             actions: [
               IconButton(
                 icon: const Icon(Icons.logout),
+                color: Colors.white,
                 onPressed: () => _showLogoutDialog(context),
                 tooltip: 'Đăng xuất',
               ),
@@ -60,65 +79,72 @@ class HomePage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Welcome Card
-                  Card(
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border.all(color: AppColors.cardBorder),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.06),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Row(
-                        children: [
-                          const CircleAvatar(
-                            radius: 30,
-                            backgroundColor: Colors.blue,
-                            child: Icon(
-                              Icons.person,
-                              size: 35,
-                              color: Colors.white,
-                            ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
                           ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Xin chào,',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                                Text(
-                                  user?.fullName ?? 'Nhân viên',
-                                  style: const TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  user?.email ?? '',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                              ],
-                            ),
+                          child: const Icon(
+                            Icons.person,
+                            size: 35,
+                            color: AppColors.primary,
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Xin chào,',
+                                style: AppTypography.bodyRegular1.copyWith(
+                                  fontSize: 14,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                              Text(
+                                user?.fullName ?? 'Nhân viên',
+                                style: AppTypography.header2.copyWith(
+                                  fontSize: 20,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                user?.email ?? '',
+                                style: AppTypography.bodyRegular1.copyWith(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 24),
 
                   // Quick Stats
-                  const Text(
-                    'Thống kê hôm nay',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
+                  Text('Thống kê hôm nay', style: AppTypography.subHeader),
                   const SizedBox(height: 12),
                   Row(
                     children: [
@@ -127,7 +153,7 @@ class HomePage extends StatelessWidget {
                           icon: Icons.pending_actions,
                           title: 'Đang chờ',
                           value: '0',
-                          color: Colors.orange,
+                          color: AppColors.primaryGradientStart,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -136,7 +162,7 @@ class HomePage extends StatelessWidget {
                           icon: Icons.check_circle,
                           title: 'Hoàn thành',
                           value: '0',
-                          color: Colors.green,
+                          color: AppColors.successGradientStart,
                         ),
                       ),
                     ],
@@ -144,10 +170,7 @@ class HomePage extends StatelessWidget {
                   const SizedBox(height: 24),
 
                   // Menu Grid
-                  const Text(
-                    'Tính năng',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
+                  Text('Tính năng', style: AppTypography.subHeader),
                   const SizedBox(height: 12),
                   Expanded(
                     child: GridView.count(
@@ -205,29 +228,41 @@ class HomePage extends StatelessWidget {
     required String value,
     required Color color,
   }) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Icon(icon, size: 32, color: color),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: AppColors.cardBorder),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 32, color: color),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontFamily: 'DM Sans',
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: color,
             ),
-            Text(
-              title,
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+          ),
+          Text(
+            title,
+            style: AppTypography.bodyRegular1.copyWith(
+              fontSize: 12,
+              color: AppColors.textSecondary,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -238,34 +273,52 @@ class HomePage extends StatelessWidget {
     String? subtitle,
     required VoidCallback onTap,
   }) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 48, color: Colors.blue),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              if (subtitle != null) ...[
-                const SizedBox(height: 4),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: AppColors.cardBorder),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 48, color: AppColors.primary),
+                const SizedBox(height: 12),
                 Text(
-                  subtitle,
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  title,
+                  style: AppTypography.header3.copyWith(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: AppTypography.bodyRegular1.copyWith(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -276,23 +329,36 @@ class HomePage extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Đăng xuất'),
-        content: const Text('Bạn có chắc chắn muốn đăng xuất?'),
+        title: Text('Đăng xuất', style: AppTypography.header2),
+        content: Text(
+          'Bạn có chắc chắn muốn đăng xuất?',
+          style: AppTypography.header3,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Hủy'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.read<AuthBloc>().add(const LogoutEvent());
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+            child: Text(
+              'Hủy',
+              style: AppTypography.subHeader.copyWith(
+                color: AppColors.neutralMid,
+              ),
             ),
-            child: const Text('Đăng xuất'),
+          ),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppColors.error,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                context.read<AuthBloc>().add(const LogoutEvent());
+              },
+              child: Text(
+                'Đăng xuất',
+                style: AppTypography.subHeader.copyWith(color: Colors.white),
+              ),
+            ),
           ),
         ],
       ),

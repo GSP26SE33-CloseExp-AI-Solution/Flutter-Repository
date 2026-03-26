@@ -18,8 +18,8 @@ class ApiConstants {
     }
     // For Android
     if (Platform.isAndroid) {
-      return 'http://192.168.1.13:5014/api'; // Real Device
-      // return 'http://10.0.2.2/api'; // Android Emulator
+      // return 'http://192.168.1.13:5014/api'; // Real Device
+      return 'http://10.0.2.2:5014/api'; // Android Emulator
     }
     // For iOS
     if (Platform.isIOS) {

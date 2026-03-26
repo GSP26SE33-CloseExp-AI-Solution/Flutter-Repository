@@ -1,350 +1,377 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
+import '../../../../core/constants/app_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 
-/// Screen 5 — QR Scan Modal
+/// Screen 5 — QR Scan Modal matching exact design from provided image
 Future<String?> showQrScanModal(BuildContext context) {
   final codeController = TextEditingController();
 
   return showDialog<String?>(
     context: context,
     barrierDismissible: true,
-    builder: (context) => Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // ── Modal header — gradient per spec ────────────────────────────
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(16, 16, 8, 16),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  AppColors.headerGradientStart,
-                  AppColors.headerGradientEnd,
-                ],
+    barrierColor: Colors.black.withValues(alpha: 0.90),
+    builder: (context) => Center(
+      child: Container(
+        width: 341.27,
+        height: 778.99,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Column(
+          children: [
+            // ── Header section ──────────────────────────────────────────
+            Container(
+              width: double.infinity,
+              height: 107.95,
+              padding: const EdgeInsets.only(top: 24, left: 24, right: 24),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [AppColors.headerGradientStart, AppColors.headerGradientEnd],
+                ),
               ),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                spacing: 7.99,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
                         'Quét mã QR',
-                        style: AppTypography.header2.copyWith(
-                          fontFamily: 'DM Sans',
+                        style: AppTypography.header1.copyWith(
                           fontSize: 20,
                           color: Colors.white,
+                          letterSpacing: -0.60,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Hướng camera vào mã QR để xác nhận',
-                        style: AppTypography.header3.copyWith(
-                          color: Colors.white.withValues(alpha: 0.9),
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Container(
+                          width: 31.98,
+                          height: 31.98,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.20),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Center(
+                            child: SvgPicture.asset(
+                              AppIcons.close,
+                              width: 19.98,
+                              height: 19.98,
+                            ),
+                          ),
                         ),
                       ),
                     ],
                   ),
-                ),
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    shape: BoxShape.circle,
+                  Opacity(
+                    opacity: 0.90,
+                    child: Text(
+                      'Quét mã QR từ đơn hàng của khách hàng',
+                      style: AppTypography.header3.copyWith(
+                        color: Colors.white,
+                        fontSize: 14,
+                      ),
+                    ),
                   ),
-                  child: IconButton(
-                    padding: EdgeInsets.zero,
-                    icon: const Icon(Icons.close, color: Colors.white, size: 18),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
 
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // ── Camera viewfinder ──────────────────────────────────────
-                Container(
-                  height: 220,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF101828),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.3),
-                      width: 3.55,
-                    ),
-                  ),
-                  child: Stack(
-                    children: [
-                      // Corner accents (QR frame corners)
-                      ..._buildQrCorners(),
-                      Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.qr_code_scanner,
-                              size: 40,
-                              color: Colors.white.withValues(alpha: 0.75),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Hướng camera vào mã QR',
-                              style: AppTypography.header3.copyWith(
-                                color: Colors.white.withValues(alpha: 0.75),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                // ── Simulate QR scan — success gradient ────────────────────
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [
-                          AppColors.successGradientStart,
-                          AppColors.successGradientEnd,
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: TextButton(
-                      onPressed: () =>
-                          Navigator.pop(context, 'MOCK_QR_CODE'),
-                      child: Text(
-                        'Mô phỏng quét QR',
-                        style: AppTypography.subHeader.copyWith(
-                          color: Colors.white,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // ── Manual entry ──────────────────────────────────────────
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Hoặc nhập mã thủ công',
-                    style: AppTypography.header3.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                TextField(
-                  controller: codeController,
-                  decoration: InputDecoration(
-                    hintText: 'Nhập mã',
-                    hintStyle: AppTypography.header3.copyWith(
-                      color: AppColors.textPrimary.withValues(alpha: 0.5),
-                      fontSize: 16,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide:
-                          const BorderSide(color: Color(0xFFD0D5DB)),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide:
-                          const BorderSide(color: Color(0xFFD0D5DB)),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                // ── Confirm button — reactive via ValueListenableBuilder ───
-                // Spec: disabled (#D1D5DC) when empty; active (gradient) when filled
-                ValueListenableBuilder<TextEditingValue>(
-                  valueListenable: codeController,
-                  builder: (context, value, _) {
-                    final hasCode = value.text.trim().isNotEmpty;
-                    return SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: hasCode
-                              ? const LinearGradient(
-                                  colors: [
-                                    AppColors.successGradientStart,
-                                    AppColors.successGradientEnd,
-                                  ],
-                                )
-                              : null,
-                          color: hasCode ? null : const Color(0xFFD1D5DC),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Material(
-                          color: Colors.transparent,
-                          borderRadius: BorderRadius.circular(16),
-                          child: InkWell(
-                            onTap: hasCode
-                                ? () => Navigator.pop(
-                                      context,
-                                      codeController.text.trim(),
-                                    )
-                                : null,
+            // ── Content section ─────────────────────────────────────────
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 24, left: 24, right: 24),
+                child: Column(
+                  children: [
+                    // Camera viewfinder section
+                    Column(
+                      spacing: 15.99,
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          height: 293.28,
+                          clipBehavior: Clip.antiAlias,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF101828),
                             borderRadius: BorderRadius.circular(16),
-                            child: Center(
-                              child: Text(
-                                'Xác nhận mã',
-                                style: AppTypography.subHeader.copyWith(
-                                  color: Colors.white,
-                                  fontSize: 16,
+                          ),
+                          child: Stack(
+                            children: [
+                              // QR scanner icon in center
+                              Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Opacity(
+                                      opacity: 0.50,
+                                      child: SvgPicture.asset(
+                                        AppIcons.qrScanner,
+                                        width: 63.98,
+                                        height: 63.98,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 11.98),
+                                    Opacity(
+                                      opacity: 0.75,
+                                      child: Text(
+                                        'Hướng camera vào mã QR',
+                                        textAlign: TextAlign.center,
+                                        style: AppTypography.header3.copyWith(
+                                          color: Colors.white,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              // QR viewfinder frame
+                              Positioned(
+                                left: 47.99,
+                                top: 47.99,
+                                child: Container(
+                                  width: 197.29,
+                                  height: 197.29,
+                                  decoration: BoxDecoration(
+                                    border: Border.all(color: Colors.white, width: 3.55),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Stack(
+                                    children: [
+                                      // Top-left corner
+                                      Positioned(
+                                        left: 3.55,
+                                        top: 3.55,
+                                        child: Container(
+                                          width: 31.98,
+                                          height: 31.98,
+                                          decoration: const BoxDecoration(
+                                            border: Border(
+                                              left: BorderSide(color: Color(0xFF05DF72), width: 3.55),
+                                              top: BorderSide(color: Color(0xFF05DF72), width: 3.55),
+                                            ),
+                                            borderRadius: BorderRadius.only(
+                                              topLeft: Radius.circular(14),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      // Top-right corner
+                                      Positioned(
+                                        right: 3.55,
+                                        top: 3.55,
+                                        child: Container(
+                                          width: 31.98,
+                                          height: 31.98,
+                                          decoration: const BoxDecoration(
+                                            border: Border(
+                                              right: BorderSide(color: Color(0xFF05DF72), width: 3.55),
+                                              top: BorderSide(color: Color(0xFF05DF72), width: 3.55),
+                                            ),
+                                            borderRadius: BorderRadius.only(
+                                              topRight: Radius.circular(14),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      // Bottom-left corner
+                                      Positioned(
+                                        left: 3.55,
+                                        bottom: 3.55,
+                                        child: Container(
+                                          width: 31.98,
+                                          height: 31.98,
+                                          decoration: const BoxDecoration(
+                                            border: Border(
+                                              left: BorderSide(color: Color(0xFF05DF72), width: 3.55),
+                                              bottom: BorderSide(color: Color(0xFF05DF72), width: 3.55),
+                                            ),
+                                            borderRadius: BorderRadius.only(
+                                              bottomLeft: Radius.circular(14),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      // Bottom-right corner
+                                      Positioned(
+                                        right: 3.55,
+                                        bottom: 3.55,
+                                        child: Container(
+                                          width: 31.98,
+                                          height: 31.98,
+                                          decoration: const BoxDecoration(
+                                            border: Border(
+                                              right: BorderSide(color: Color(0xFF05DF72), width: 3.55),
+                                              bottom: BorderSide(color: Color(0xFF05DF72), width: 3.55),
+                                            ),
+                                            borderRadius: BorderRadius.only(
+                                              bottomRight: Radius.circular(14),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Mock QR button
+                        Container(
+                          width: double.infinity,
+                          height: 47.97,
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [AppColors.successGradientStart, AppColors.successGradientEnd],
+                            ),
+                            borderRadius: BorderRadius.all(Radius.circular(16)),
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            borderRadius: BorderRadius.circular(16),
+                            child: InkWell(
+                              onTap: () => Navigator.pop(context, 'MOCK_QR_CODE'),
+                              borderRadius: BorderRadius.circular(16),
+                              child: const Center(
+                                child: Text(
+                                  'Mô phỏng quét QR',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontFamily: 'Be Vietnam Pro',
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
                               ),
                             ),
                           ),
                         ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Manual input section
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.only(top: 25.18),
+                      decoration: const BoxDecoration(
+                        border: Border(
+                          top: BorderSide(color: Color(0xFFE5E7EB), width: 1.18),
+                        ),
                       ),
-                    );
-                  },
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        spacing: 12,
+                        children: [
+                          Text(
+                            'Hoặc nhập mã thủ công',
+                            style: AppTypography.header3.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          Column(
+                            spacing: 12,
+                            children: [
+                              // Input field
+                              Container(
+                                width: double.infinity,
+                                height: 50.34,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                clipBehavior: Clip.antiAlias,
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: const Color(0xFFD0D5DB), width: 1.18),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: TextField(
+                                  controller: codeController,
+                                  style: AppTypography.header3.copyWith(
+                                    fontSize: 16,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                  decoration: InputDecoration(
+                                    hintText: 'Nhập mã QR',
+                                    hintStyle: TextStyle(
+                                      color: AppColors.textPrimary.withValues(alpha: 0.5),
+                                      fontSize: 16,
+                                      fontFamily: 'Be Vietnam Pro',
+                                      fontWeight: FontWeight.w400,
+                                    ),
+                                    border: InputBorder.none,
+                                    isDense: true,
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                ),
+                              ),
+
+                              // Confirm button with reactive state
+                              ValueListenableBuilder<TextEditingValue>(
+                                valueListenable: codeController,
+                                builder: (context, value, _) {
+                                  final hasCode = value.text.trim().isNotEmpty;
+                                  return Container(
+                                    width: double.infinity,
+                                    height: 47.97,
+                                    decoration: BoxDecoration(
+                                      gradient: hasCode
+                                          ? const LinearGradient(
+                                              colors: [
+                                                AppColors.successGradientStart,
+                                                AppColors.successGradientEnd,
+                                              ],
+                                            )
+                                          : null,
+                                      color: hasCode ? null : const Color(0xFFD1D5DC),
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: Material(
+                                      color: Colors.transparent,
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: InkWell(
+                                        onTap: hasCode
+                                            ? () => Navigator.pop(context, codeController.text.trim())
+                                            : null,
+                                        borderRadius: BorderRadius.circular(16),
+                                        child: const Center(
+                                          child: Text(
+                                            'Xác nhận mã',
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 16,
+                                              fontFamily: 'Be Vietnam Pro',
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     ),
   );
-}
-
-List<Widget> _buildQrCorners() {
-  const c = Color(0xFF05DF72);
-  const size = 20.0;
-  const thick = 3.5;
-  const pad = 20.0;
-  return [
-    // Top-left
-    Positioned(
-      top: pad,
-      left: pad,
-      child: _Corner(color: c, size: size, thick: thick, top: true, left: true),
-    ),
-    // Top-right
-    Positioned(
-      top: pad,
-      right: pad,
-      child:
-          _Corner(color: c, size: size, thick: thick, top: true, left: false),
-    ),
-    // Bottom-left
-    Positioned(
-      bottom: pad,
-      left: pad,
-      child:
-          _Corner(color: c, size: size, thick: thick, top: false, left: true),
-    ),
-    // Bottom-right
-    Positioned(
-      bottom: pad,
-      right: pad,
-      child:
-          _Corner(color: c, size: size, thick: thick, top: false, left: false),
-    ),
-  ];
-}
-
-class _Corner extends StatelessWidget {
-  final Color color;
-  final double size;
-  final double thick;
-  final bool top;
-  final bool left;
-
-  const _Corner({
-    required this.color,
-    required this.size,
-    required this.thick,
-    required this.top,
-    required this.left,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: size,
-      height: size,
-      child: CustomPaint(
-        painter: _CornerPainter(
-          color: color,
-          thick: thick,
-          top: top,
-          left: left,
-        ),
-      ),
-    );
-  }
-}
-
-class _CornerPainter extends CustomPainter {
-  final Color color;
-  final double thick;
-  final bool top;
-  final bool left;
-
-  const _CornerPainter({
-    required this.color,
-    required this.thick,
-    required this.top,
-    required this.left,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = thick
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    final path = Path();
-    if (top && left) {
-      path.moveTo(0, size.height);
-      path.lineTo(0, 0);
-      path.lineTo(size.width, 0);
-    } else if (top && !left) {
-      path.moveTo(0, 0);
-      path.lineTo(size.width, 0);
-      path.lineTo(size.width, size.height);
-    } else if (!top && left) {
-      path.moveTo(0, 0);
-      path.lineTo(0, size.height);
-      path.lineTo(size.width, size.height);
-    } else {
-      path.moveTo(0, size.height);
-      path.lineTo(size.width, size.height);
-      path.lineTo(size.width, 0);
-    }
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(_CornerPainter oldDelegate) => false;
 }

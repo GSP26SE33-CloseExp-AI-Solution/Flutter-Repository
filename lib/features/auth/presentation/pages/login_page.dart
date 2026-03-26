@@ -102,7 +102,7 @@ class _LoginPageState extends State<LoginPage> {
                         decoration: const InputDecoration(
                           labelText: 'Email',
                           hintText: 'Nhập email của bạn',
-                          prefixIcon: Icon(Icons.email_outlined),
+                          prefixIcon: const Icon(Icons.email_outlined),
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
@@ -133,6 +133,7 @@ class _LoginPageState extends State<LoginPage> {
                                   ? Icons.visibility_off_outlined
                                   : Icons.visibility_outlined,
                             ),
+                            color: AppColors.neutralMid,
                             onPressed: () => setState(
                               () => _obscurePassword = !_obscurePassword,
                             ),

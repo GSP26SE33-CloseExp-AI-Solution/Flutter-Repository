@@ -1,0 +1,29 @@
+---
+description: "Core rules for App-CloseExp Flutter mobile app. Apply when editing Dart files, BLoC, Dio/Retrofit, DI, feature modules, or pubspec."
+globs: ["lib/**/*.dart", "test/**/*.dart", "pubspec.yaml", "analysis_options.yaml"]
+alwaysApply: false
+---
+
+# App-CloseExp — Flutter Rules
+
+## Architecture
+- Keep feature-first + 3-layer structure: `data`, `domain`, `presentation`.
+- BLoC only calls UseCases; do not call repository/data source directly from BLoC.
+- Use `go_router` for route wiring in `core/router/app_router.dart`.
+
+## Networking & Auth
+- Use `dio` + `retrofit` for API integration.
+- Keep BE contract aligned with `ApiResponse<T>` semantics.
+- Store tokens only in `flutter_secure_storage` (not in shared preferences).
+
+## DI & Codegen
+- Use `get_it` + `injectable` pattern.
+- Run build_runner after model/retrofit/DI annotation changes.
+
+## Must-Pass Checklist
+- [ ] Layer boundaries respected (`presentation -> domain -> data`).
+- [ ] DTO/model nullability matches backend contract.
+- [ ] No hardcoded secrets or API keys.
+- [ ] Delivery task/time-slot flows keep canonical slot windows (`19:00-20:30`, `21:00-22:30`) aligned with backend.
+- [ ] Validation run: `flutter analyze` and `flutter test`.
+- [ ] Run when needed: `flutter pub run build_runner build --delete-conflicting-outputs`.

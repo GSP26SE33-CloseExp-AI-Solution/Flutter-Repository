@@ -20,7 +20,9 @@ class ProfilePage extends StatelessWidget {
           appBar: AppBar(
             title: Text(
               'Tài khoản',
-              style: AppTypography.header2.copyWith(color: AppColors.neutralDark),
+              style: AppTypography.header2.copyWith(
+                color: AppColors.neutralDark,
+              ),
             ),
             actions: [
               IconButton(
@@ -130,7 +132,11 @@ class _InfoRow extends StatelessWidget {
   final String label;
   final String value;
 
-  const _InfoRow({required this.icon, required this.label, required this.value});
+  const _InfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -150,7 +156,9 @@ class _InfoRow extends StatelessWidget {
           Expanded(
             child: Text(
               value,
-              style: AppTypography.header3.copyWith(color: AppColors.textPrimary),
+              style: AppTypography.header3.copyWith(
+                color: AppColors.textPrimary,
+              ),
               overflow: TextOverflow.ellipsis,
             ),
           ),

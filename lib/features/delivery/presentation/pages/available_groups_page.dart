@@ -43,11 +43,12 @@ class _AvailableGroupsPageState extends State<AvailableGroupsPage> {
             title: 'Đơn hàng cần giao',
             subtitle: subtitle,
             actions: [
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                onPressed: _loadGroups,
-                tooltip: 'Làm mới',
-              ),
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              color: AppColors.headerGradientEnd,
+              onPressed: _loadGroups,
+              tooltip: 'Làm mới',
+            ),
             ],
           ),
           body: _buildBody(context, state),

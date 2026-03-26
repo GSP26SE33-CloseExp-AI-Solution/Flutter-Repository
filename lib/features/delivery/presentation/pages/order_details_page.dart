@@ -2,10 +2,12 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../core/constants/app_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../domain/entities/delivery_order.dart';
@@ -148,13 +150,50 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                   label: 'Tên',
                   value: order.customerName,
                 ),
-                DeliveryInfoRowWithAction(
-                  icon: Icons.phone_outlined,
-                  label: 'SĐT',
-                  value: order.customerPhone,
-                  onAction: () => _callCustomer(order.customerPhone),
-                  actionIcon: Icons.call,
-                  actionColor: AppColors.successGradientEnd,
+                Row(
+                  children: [
+                    SvgPicture.asset(
+                      AppIcons.phone,
+                      width: 20,
+                      height: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'SĐT: ',
+                      style: AppTypography.bodyRegular1.copyWith(
+                        color: AppColors.neutralMid,
+                        fontSize: 13,
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        order.customerPhone,
+                        style: AppTypography.bodyRegular1.copyWith(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 13,
+                          color: AppColors.neutralDark,
+                        ),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => _callCustomer(order.customerPhone),
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFDCFCE7),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: SvgPicture.asset(
+                            AppIcons.phone,
+                            width: 20,
+                            height: 20,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -197,26 +236,64 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                 ),
                 const Divider(color: AppColors.cardBorder),
                 if (order.isHomeDelivery)
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          order.deliveryAddress ?? 'Chưa có địa chỉ',
-                          style: AppTypography.header3.copyWith(
-                            color: AppColors.textPrimary,
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.cardSurface,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      children: [
+                        SvgPicture.asset(
+                          AppIcons.locationBlue,
+                          width: 20,
+                          height: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Địa chỉ giao hàng',
+                                style: AppTypography.header3.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                order.deliveryAddress ?? 'Chưa có địa chỉ',
+                                style: AppTypography.header3.copyWith(
+                                  color: const Color(0xFF495565),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                      IconButton(
-                        onPressed: () =>
-                            _openMaps(order.deliveryAddress ?? ''),
-                        icon: const Icon(
-                          Icons.directions,
-                          color: Color(0xFF2B7FFF),
+                        GestureDetector(
+                          onTap: () => _openMaps(order.deliveryAddress ?? ''),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF2B7FFF),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Text(
+                              'Chỉ đường',
+                              style: AppTypography.header3.copyWith(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
                         ),
-                        tooltip: 'Mở bản đồ',
-                      ),
-                    ],
+                      ],
+                    ),
                   )
                 else ...[
                   Text(
@@ -238,14 +315,27 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                           ),
                         ),
                       ),
-                      IconButton(
-                        onPressed: () =>
+                      GestureDetector(
+                        onTap: () =>
                             _openMaps(order.pickupPointAddress ?? ''),
-                        icon: const Icon(
-                          Icons.directions,
-                          color: Color(0xFF2B7FFF),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2B7FFF),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Text(
+                            'Chỉ đường',
+                            style: AppTypography.header3.copyWith(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
-                        tooltip: 'Mở bản đồ',
                       ),
                     ],
                   ),
@@ -257,6 +347,93 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                 ],
               ],
             ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // ── Meta chips ────────────────────────────────────────────────
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.cardSurface,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    children: [
+                      SvgPicture.asset(
+                        AppIcons.clock,
+                        width: 20,
+                        height: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Khung giờ',
+                            style: AppTypography.bodyRegular1.copyWith(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '19:00 - 20:30',
+                            style: AppTypography.header3.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.cardSurface,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    children: [
+                      SvgPicture.asset(
+                        AppIcons.package,
+                        width: 20,
+                        height: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Điểm lấy',
+                            style: AppTypography.bodyRegular1.copyWith(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Điểm A - Quận 1',
+                            style: AppTypography.header3.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
 
           const SizedBox(height: 12),
@@ -390,13 +567,19 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
   }
 
   Widget _buildItemRow(DeliveryOrderItem item, NumberFormat fmt) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: AppColors.cardBorder, width: 1.18),
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Row(
         children: [
           Container(
-            width: 48,
-            height: 48,
+            width: 47.99,
+            height: 47.99,
             decoration: BoxDecoration(
               color: const Color(0xFFFFEDD4),
               borderRadius: BorderRadius.circular(16),
@@ -421,7 +604,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                   ),
                 ),
                 Text(
-                  'x${item.quantity}',
+                  'Số lượng: ${item.quantity}',
                   style: AppTypography.bodyRegular1.copyWith(
                     fontSize: 12,
                     color: AppColors.textSecondary,
@@ -520,6 +703,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                         onPressed: () =>
                             setDialogState(() => localSelectedPath = null),
                         icon: const Icon(Icons.close),
+                        color: AppColors.error,
                       ),
                     ],
                   ],

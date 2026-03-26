@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../../core/router/app_router.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_typography.dart';
 import '../../domain/entities/delivery_group.dart';
 import '../bloc/delivery_bloc.dart';
 import '../bloc/delivery_event.dart';
@@ -11,7 +14,7 @@ import '../widgets/widgets.dart';
 /// My Deliveries Page - shows delivery groups assigned to current staff
 class MyDeliveriesPage extends StatefulWidget {
   const MyDeliveriesPage({super.key});
-  // TODO: Fix color the match app theme
+
   @override
   State<MyDeliveriesPage> createState() => _MyDeliveriesPageState();
 }
@@ -78,28 +81,57 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Đơn hàng của tôi'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          indicatorColor: Colors.white,
-          tabs: const [
-            Tab(text: 'Tất cả'),
-            Tab(text: 'Đang giao'),
-            Tab(text: 'Hoàn thành'),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => _loadGroups(refresh: true),
-            tooltip: 'Làm mới',
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight + 48),
+        child: AppBar(
+          backgroundColor: Colors.transparent,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.headerGradientStart,
+                  AppColors.headerGradientEnd,
+                ],
+              ),
+            ),
           ),
-        ],
+          title: Text(
+            'Đơn hàng của tôi',
+            style: AppTypography.header1.copyWith(
+              fontSize: 20,
+              color: Colors.white,
+              letterSpacing: -0.60,
+            ),
+          ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              color: AppColors.headerGradientEnd,
+              onPressed: () => _loadGroups(refresh: true),
+              tooltip: 'Làm mới',
+            ),
+          ],
+          bottom: TabBar(
+            controller: _tabController,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white.withValues(alpha: 0.7),
+            indicatorColor: Colors.white,
+            labelStyle: AppTypography.header3.copyWith(
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+            unselectedLabelStyle: AppTypography.header3.copyWith(
+              color: Colors.white.withValues(alpha: 0.7),
+            ),
+            tabs: const [
+              Tab(text: 'Tất cả'),
+              Tab(text: 'Đang giao'),
+              Tab(text: 'Hoàn thành'),
+            ],
+          ),
+        ),
       ),
       body: BlocConsumer<DeliveryBloc, DeliveryState>(
         listener: _handleStateChange,
@@ -113,7 +145,7 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Đã bắt đầu giao hàng'),
-          backgroundColor: Colors.green,
+          backgroundColor: AppColors.successGradientEnd,
         ),
       );
       _loadGroups(refresh: true);
@@ -121,17 +153,23 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Đã hoàn thành nhóm giao'),
-          backgroundColor: Colors.green,
+          backgroundColor: AppColors.successGradientEnd,
         ),
       );
       _loadGroups(refresh: true);
     } else if (state is DeliveryError) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text(state.message),
+          backgroundColor: AppColors.error,
+        ),
       );
     } else if (state is DeliveryActionError) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text(state.message),
+          backgroundColor: AppColors.error,
+        ),
       );
       _loadGroups(refresh: true);
     }
@@ -167,6 +205,7 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
 
   Widget _buildGroupsList(MyGroupsLoaded state) {
     return RefreshIndicator(
+      color: AppColors.headerGradientEnd,
       onRefresh: () async => _loadGroups(refresh: true),
       child: ListView.builder(
         controller: _scrollController,
@@ -177,7 +216,7 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
             return const Center(
               child: Padding(
                 padding: EdgeInsets.all(16),
-                child: CircularProgressIndicator(),
+                child: CircularProgressIndicator(color: AppColors.primary),
               ),
             );
           }
@@ -212,6 +251,7 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
           '• Số đơn: ${group.totalOrders}\n'
           '• Khu vực: ${group.deliveryArea}',
       confirmLabel: 'Bắt đầu',
+      confirmColor: AppColors.successGradientEnd,
     );
     if (confirmed == true && mounted) {
       context.read<DeliveryBloc>().add(

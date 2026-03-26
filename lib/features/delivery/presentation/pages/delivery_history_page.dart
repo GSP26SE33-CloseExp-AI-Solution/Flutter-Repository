@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_typography.dart';
 import '../../domain/entities/delivery_order.dart';
 import '../bloc/delivery_bloc.dart';
 import '../bloc/delivery_event.dart';
@@ -69,18 +72,18 @@ class _DeliveryHistoryPageState extends State<DeliveryHistoryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Lịch sử giao hàng'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
+      appBar: GradientAppBar(
+        title: 'Lịch sử giao hàng',
         actions: [
           IconButton(
             icon: const Icon(Icons.filter_list),
+            color: AppColors.headerGradientEnd,
             onPressed: _showFilterDialog,
             tooltip: 'Bộ lọc',
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
+            color: AppColors.headerGradientEnd,
             onPressed: () => _loadHistory(refresh: true),
             tooltip: 'Làm mới',
           ),
@@ -120,6 +123,7 @@ class _DeliveryHistoryPageState extends State<DeliveryHistoryPage> {
 
   Widget _buildHistoryList(DeliveryHistoryLoaded state) {
     return RefreshIndicator(
+      color: AppColors.headerGradientEnd,
       onRefresh: () async {
         _loadHistory(refresh: true);
       },
@@ -137,11 +141,17 @@ class _DeliveryHistoryPageState extends State<DeliveryHistoryPage> {
               children: [
                 Text(
                   'Tổng cộng: ${state.totalCount} bản ghi',
-                  style: const TextStyle(fontWeight: FontWeight.w500),
+                  style: AppTypography.header3.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
                 Text(
                   'Trang ${state.currentPage}/${state.totalPages}',
-                  style: TextStyle(color: Colors.grey[600]),
+                  style: AppTypography.bodyRegular1.copyWith(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                  ),
                 ),
               ],
             ),
@@ -158,7 +168,7 @@ class _DeliveryHistoryPageState extends State<DeliveryHistoryPage> {
                   return const Center(
                     child: Padding(
                       padding: EdgeInsets.all(16),
-                      child: CircularProgressIndicator(),
+                      child: CircularProgressIndicator(color: AppColors.primary),
                     ),
                   );
                 }
@@ -210,46 +220,57 @@ class _DeliveryHistoryPageState extends State<DeliveryHistoryPage> {
   Widget _buildHistoryCard(DeliveryRecord record) {
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
 
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  record.orderCode,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: AppColors.cardBorder),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                record.orderCode,
+                style: AppTypography.header2.copyWith(
+                  fontFamily: 'DM Sans',
+                  fontSize: 16,
+                  color: AppColors.textPrimary,
                 ),
-                DeliveryRecordStatusBadge(status: record.status),
-              ],
-            ),
-            const Divider(height: 16),
-            if (record.deliveredAt != null)
-              DeliveryInfoRowSimple(
-                icon: Icons.access_time,
-                text: dateFormat.format(record.deliveredAt!),
               ),
+              DeliveryRecordStatusBadge(status: record.status),
+            ],
+          ),
+          const Divider(height: 16, color: AppColors.cardBorder),
+          if (record.deliveredAt != null)
             DeliveryInfoRowSimple(
-              icon: Icons.person,
-              text: record.deliveryStaffName,
+              icon: Icons.access_time,
+              text: dateFormat.format(record.deliveredAt!),
             ),
-            if (record.failureReason != null && record.failureReason!.isNotEmpty)
-              DeliveryNoteCard(
-                note: record.failureReason!,
-                icon: Icons.warning,
-                backgroundColor: Colors.red[50],
-                borderColor: Colors.red[200]!,
-                textColor: Colors.red[700]!,
-              ),
-          ],
-        ),
+          DeliveryInfoRowSimple(
+            icon: Icons.person,
+            text: record.deliveryStaffName,
+          ),
+          if (record.failureReason != null && record.failureReason!.isNotEmpty)
+            DeliveryNoteCard(
+              note: record.failureReason!,
+              icon: Icons.warning,
+              backgroundColor: AppColors.error.withValues(alpha: 0.1),
+              borderColor: AppColors.error.withValues(alpha: 0.3),
+              textColor: AppColors.error,
+            ),
+        ],
       ),
     );
   }
@@ -258,13 +279,13 @@ class _DeliveryHistoryPageState extends State<DeliveryHistoryPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Bộ lọc'),
+        title: Text('Bộ lọc', style: AppTypography.header2),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Từ ngày:'),
+              Text('Từ ngày:', style: AppTypography.header3),
               const SizedBox(height: 8),
               OutlinedButton.icon(
                 onPressed: () => _selectFromDate(context),
@@ -274,7 +295,7 @@ class _DeliveryHistoryPageState extends State<DeliveryHistoryPage> {
                     : 'Chọn ngày'),
               ),
               const SizedBox(height: 16),
-              const Text('Đến ngày:'),
+              Text('Đến ngày:', style: AppTypography.header3),
               const SizedBox(height: 8),
               OutlinedButton.icon(
                 onPressed: () => _selectToDate(context),
@@ -284,7 +305,7 @@ class _DeliveryHistoryPageState extends State<DeliveryHistoryPage> {
                     : 'Chọn ngày'),
               ),
               const SizedBox(height: 16),
-              const Text('Trạng thái:'),
+              Text('Trạng thái:', style: AppTypography.header3),
               const SizedBox(height: 8),
               DropdownButton<String?>(
                 value: _statusFilter,
@@ -315,7 +336,10 @@ class _DeliveryHistoryPageState extends State<DeliveryHistoryPage> {
               Navigator.pop(context);
               _loadHistory(refresh: true);
             },
-            child: const Text('Xóa bộ lọc'),
+            child: Text(
+              'Xóa bộ lọc',
+              style: AppTypography.subHeader.copyWith(color: AppColors.neutralMid),
+            ),
           ),
           ElevatedButton(
             onPressed: () {
