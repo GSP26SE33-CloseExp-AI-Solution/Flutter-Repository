@@ -23,7 +23,8 @@ class ApiConstants {
     }
     // For iOS
     if (Platform.isIOS) {
-      return 'http://localhost:5014/api'; // iOS Simulator
+      // return 'http://192.168.1.13:5014/api'; // Real Device
+      return 'http://10.0.2.2:5014/api'; // iOS Emulator
     }
     return 'http://localhost:5014/api';
   }

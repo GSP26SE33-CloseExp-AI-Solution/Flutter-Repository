@@ -27,9 +27,8 @@ class GradientAppBar extends StatelessWidget implements PreferredSizeWidget {
   });
 
   @override
-  Size get preferredSize => Size.fromHeight(
-        subtitle != null ? kToolbarHeight + 20 : kToolbarHeight,
-      );
+  Size get preferredSize =>
+      Size.fromHeight(subtitle != null ? kToolbarHeight + 20 : kToolbarHeight);
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +43,10 @@ class GradientAppBar extends StatelessWidget implements PreferredSizeWidget {
       flexibleSpace: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [AppColors.headerGradientStart, AppColors.headerGradientEnd],
+            colors: [
+              AppColors.headerGradientStart,
+              AppColors.headerGradientEnd,
+            ],
           ),
         ),
       ),
@@ -355,22 +357,62 @@ class DeliveryEmptyState extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             title,
-            style: AppTypography.subHeader.copyWith(color: AppColors.neutralMid),
+            style: AppTypography.subHeader.copyWith(
+              color: AppColors.neutralMid,
+            ),
           ),
           if (subtitle != null) ...[
             const SizedBox(height: 8),
             Text(
               subtitle!,
-              style: AppTypography.header3.copyWith(color: AppColors.neutralMid),
+              style: AppTypography.header3.copyWith(
+                color: AppColors.neutralMid,
+              ),
               textAlign: TextAlign.center,
             ),
           ],
           if (actionLabel != null && onAction != null) ...[
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: onAction,
-              icon: const Icon(Icons.refresh),
-              label: Text(actionLabel!),
+            const SizedBox(height: 40),
+            // ElevatedButton.icon(
+            //   style: ElevatedButton.styleFrom(
+            //     backgroundColor: AppColors.primaryGradientStart,
+            //     foregroundColor: Colors.white,
+            //   ),
+            //   onPressed: onAction,
+            //   icon: const Icon(Icons.refresh, color: Colors.white),
+            //   label: Text(actionLabel!),
+            // ),
+            Padding(
+              padding: EdgeInsets.symmetric(
+                // Responsive horizontal spacing: nhỏ màn -> padding nhỏ hơn,
+                // lớn màn -> không bị sát mép, nhưng vẫn không quá rộng.
+                horizontal: (MediaQuery.sizeOf(context).width * 0.06).clamp(
+                  16.0,
+                  32.0,
+                ),
+              ),
+              child: AppGradientButton(
+                onPressed: onAction,
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: Center(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.refresh, color: Colors.white),
+                        const SizedBox(width: 8),
+                        Text(
+                          actionLabel!,
+                          style: AppTypography.subHeader.copyWith(
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ),
           ],
         ],
@@ -386,11 +428,7 @@ class DeliveryErrorState extends StatelessWidget {
   final String message;
   final VoidCallback? onRetry;
 
-  const DeliveryErrorState({
-    super.key,
-    required this.message,
-    this.onRetry,
-  });
+  const DeliveryErrorState({super.key, required this.message, this.onRetry});
 
   @override
   Widget build(BuildContext context) {
@@ -409,15 +447,14 @@ class DeliveryErrorState extends StatelessWidget {
             child: Text(
               message,
               textAlign: TextAlign.center,
-              style: AppTypography.header3.copyWith(color: AppColors.neutralDark),
+              style: AppTypography.header3.copyWith(
+                color: AppColors.neutralDark,
+              ),
             ),
           ),
           if (onRetry != null) ...[
             const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: onRetry,
-              child: const Text('Thử lại'),
-            ),
+            ElevatedButton(onPressed: onRetry, child: const Text('Thử lại')),
           ],
         ],
       ),
@@ -523,7 +560,9 @@ class DeliveryNoteCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: backgroundColor ?? const Color(0xFFFFFBEB),
         border: Border.all(
-          color: borderColor ?? AppColors.primaryGradientStart.withValues(alpha: 0.4),
+          color:
+              borderColor ??
+              AppColors.primaryGradientStart.withValues(alpha: 0.4),
         ),
         borderRadius: BorderRadius.circular(8),
       ),
@@ -568,7 +607,9 @@ Future<bool?> showDeliveryConfirmDialog({
           onPressed: () => Navigator.pop(context, false),
           child: Text(
             cancelLabel,
-            style: AppTypography.subHeader.copyWith(color: AppColors.neutralMid),
+            style: AppTypography.subHeader.copyWith(
+              color: AppColors.neutralMid,
+            ),
           ),
         ),
         ElevatedButton(

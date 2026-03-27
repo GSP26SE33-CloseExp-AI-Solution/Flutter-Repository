@@ -45,6 +45,7 @@ dependencies:
   flutter_svg: ^2.0.10+1
   mapbox_maps_flutter: ^2.6.0
   connectivity_plus: ^7.0.0
+  device_preview: ^1.2.0
 
 dev_dependencies:
   flutter_test:

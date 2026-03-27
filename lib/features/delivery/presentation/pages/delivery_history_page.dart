@@ -37,13 +37,16 @@ class _DeliveryHistoryPageState extends State<DeliveryHistoryPage> {
     super.dispose();
   }
 
+  // BUG: Không thấy api cho filter được áp dụng
   void _loadHistory({bool refresh = false}) {
-    context.read<DeliveryBloc>().add(LoadDeliveryHistory(
-          refresh: refresh,
-          fromDate: _fromDate,
-          toDate: _toDate,
-          status: _statusFilter,
-        ));
+    context.read<DeliveryBloc>().add(
+      LoadDeliveryHistory(
+        refresh: refresh,
+        fromDate: _fromDate,
+        toDate: _toDate,
+        status: _statusFilter,
+      ),
+    );
   }
 
   void _onScroll() {
@@ -52,12 +55,14 @@ class _DeliveryHistoryPageState extends State<DeliveryHistoryPage> {
       if (state is DeliveryHistoryLoaded &&
           state.hasNextPage &&
           !state.isLoadingMore) {
-        context.read<DeliveryBloc>().add(LoadDeliveryHistory(
-              page: state.currentPage + 1,
-              fromDate: _fromDate,
-              toDate: _toDate,
-              status: _statusFilter,
-            ));
+        context.read<DeliveryBloc>().add(
+          LoadDeliveryHistory(
+            page: state.currentPage + 1,
+            fromDate: _fromDate,
+            toDate: _toDate,
+            status: _statusFilter,
+          ),
+        );
       }
     }
   }
@@ -77,13 +82,13 @@ class _DeliveryHistoryPageState extends State<DeliveryHistoryPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.filter_list),
-            color: AppColors.headerGradientEnd,
+            color: AppColors.neutralLight,
             onPressed: _showFilterDialog,
             tooltip: 'Bộ lọc',
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
-            color: AppColors.headerGradientEnd,
+            color: AppColors.neutralLight,
             onPressed: () => _loadHistory(refresh: true),
             tooltip: 'Làm mới',
           ),
@@ -168,7 +173,9 @@ class _DeliveryHistoryPageState extends State<DeliveryHistoryPage> {
                   return const Center(
                     child: Padding(
                       padding: EdgeInsets.all(16),
-                      child: CircularProgressIndicator(color: AppColors.primary),
+                      child: CircularProgressIndicator(
+                        color: AppColors.primary,
+                      ),
                     ),
                   );
                 }
@@ -278,82 +285,122 @@ class _DeliveryHistoryPageState extends State<DeliveryHistoryPage> {
   void _showFilterDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Bộ lọc', style: AppTypography.header2),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Từ ngày:', style: AppTypography.header3),
-              const SizedBox(height: 8),
-              OutlinedButton.icon(
-                onPressed: () => _selectFromDate(context),
-                icon: const Icon(Icons.calendar_today),
-                label: Text(_fromDate != null
-                    ? DateFormat('dd/MM/yyyy').format(_fromDate!)
-                    : 'Chọn ngày'),
-              ),
-              const SizedBox(height: 16),
-              Text('Đến ngày:', style: AppTypography.header3),
-              const SizedBox(height: 8),
-              OutlinedButton.icon(
-                onPressed: () => _selectToDate(context),
-                icon: const Icon(Icons.calendar_today),
-                label: Text(_toDate != null
-                    ? DateFormat('dd/MM/yyyy').format(_toDate!)
-                    : 'Chọn ngày'),
-              ),
-              const SizedBox(height: 16),
-              Text('Trạng thái:', style: AppTypography.header3),
-              const SizedBox(height: 8),
-              DropdownButton<String?>(
-                value: _statusFilter,
-                isExpanded: true,
-                hint: const Text('Tất cả'),
-                items: const [
-                  DropdownMenuItem(value: null, child: Text('Tất cả')),
-                  DropdownMenuItem(value: 'Completed', child: Text('Hoàn thành')),
-                  DropdownMenuItem(
-                      value: 'Delivered_Wait_Confirm', child: Text('Chờ xác nhận')),
-                  DropdownMenuItem(value: 'Failed', child: Text('Thất bại')),
-                ],
-                onChanged: (value) {
-                  setState(() => _statusFilter = value);
-                },
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              setState(() {
-                _fromDate = null;
-                _toDate = null;
-                _statusFilter = null;
-              });
-              Navigator.pop(context);
-              _loadHistory(refresh: true);
-            },
-            child: Text(
-              'Xóa bộ lọc',
-              style: AppTypography.subHeader.copyWith(color: AppColors.neutralMid),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('Bộ lọc', style: AppTypography.header2),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Từ ngày:', style: AppTypography.header3),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: () => _selectFromDate(context, setDialogState),
+                  icon: const Icon(Icons.calendar_today),
+                  label: Text(
+                    _fromDate != null
+                        ? DateFormat('dd/MM/yyyy').format(_fromDate!)
+                        : 'Chọn ngày',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text('Đến ngày:', style: AppTypography.header3),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: () => _selectToDate(context, setDialogState),
+                  icon: const Icon(Icons.calendar_today),
+                  label: Text(
+                    _toDate != null
+                        ? DateFormat('dd/MM/yyyy').format(_toDate!)
+                        : 'Chọn ngày',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text('Trạng thái:', style: AppTypography.header3),
+                const SizedBox(height: 8),
+                DropdownButton<String?>(
+                  dropdownColor: AppColors.neutralLight,
+                  borderRadius: BorderRadius.circular(10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  value: _statusFilter,
+                  isExpanded: true,
+                  hint: const Text('Tất cả'),
+                  items: const [
+                    DropdownMenuItem(value: null, child: Text('Tất cả')),
+                    DropdownMenuItem(
+                      value: 'Completed',
+                      child: Text('Hoàn thành'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'Delivered_Wait_Confirm',
+                      child: Text('Chờ xác nhận'),
+                    ),
+                    DropdownMenuItem(value: 'Failed', child: Text('Thất bại')),
+                  ],
+                  onChanged: (value) {
+                    // Update state in both dialog and the main page
+                    setDialogState(() => _statusFilter = value);
+                    setState(() => _statusFilter = value);
+                  },
+                ),
+              ],
             ),
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _loadHistory(refresh: true);
-            },
-            child: const Text('Áp dụng'),
-          ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: () {
+                setDialogState(() {
+                  _fromDate = null;
+                  _toDate = null;
+                  _statusFilter = null;
+                });
+                setState(() {
+                  _fromDate = null;
+                  _toDate = null;
+                  _statusFilter = null;
+                });
+                Navigator.pop(context);
+                _loadHistory(refresh: true);
+              },
+              child: Text(
+                'Xóa bộ lọc',
+                style: AppTypography.subHeader.copyWith(
+                  color: AppColors.neutralMid,
+                ),
+              ),
+            ),
+            AppGradientButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _loadHistory(refresh: true);
+              },
+              child: SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: Center(
+                  child: Text(
+                    'Áp dụng',
+                    style: AppTypography.subHeader.copyWith(
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Future<void> _selectFromDate(BuildContext dialogContext) async {
+  Future<void> _selectFromDate(
+    BuildContext dialogContext,
+    StateSetter setDialogState,
+  ) async {
     final date = await showDatePicker(
       context: dialogContext,
       initialDate: _fromDate ?? DateTime.now(),
@@ -361,11 +408,15 @@ class _DeliveryHistoryPageState extends State<DeliveryHistoryPage> {
       lastDate: DateTime.now(),
     );
     if (date != null) {
+      setDialogState(() => _fromDate = date);
       setState(() => _fromDate = date);
     }
   }
 
-  Future<void> _selectToDate(BuildContext dialogContext) async {
+  Future<void> _selectToDate(
+    BuildContext dialogContext,
+    StateSetter setDialogState,
+  ) async {
     final date = await showDatePicker(
       context: dialogContext,
       initialDate: _toDate ?? DateTime.now(),
@@ -373,6 +424,7 @@ class _DeliveryHistoryPageState extends State<DeliveryHistoryPage> {
       lastDate: DateTime.now(),
     );
     if (date != null) {
+      setDialogState(() => _toDate = date);
       setState(() => _toDate = date);
     }
   }

@@ -59,7 +59,10 @@ class _LoginPageState extends State<LoginPage> {
           return SafeArea(
             child: Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 32,
+                ),
                 child: Form(
                   key: _formKey,
                   child: Column(
@@ -102,14 +105,15 @@ class _LoginPageState extends State<LoginPage> {
                         decoration: const InputDecoration(
                           labelText: 'Email',
                           hintText: 'Nhập email của bạn',
-                          prefixIcon: const Icon(Icons.email_outlined),
+                          prefixIcon: Icon(Icons.email_outlined),
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'Vui lòng nhập email';
                           }
-                          if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
-                              .hasMatch(value)) {
+                          if (!RegExp(
+                            r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+                          ).hasMatch(value)) {
                             return 'Email không hợp lệ';
                           }
                           return null;
@@ -133,7 +137,7 @@ class _LoginPageState extends State<LoginPage> {
                                   ? Icons.visibility_off_outlined
                                   : Icons.visibility_outlined,
                             ),
-                            color: AppColors.neutralMid,
+                            color: AppColors.neutralDark,
                             onPressed: () => setState(
                               () => _obscurePassword = !_obscurePassword,
                             ),
@@ -152,22 +156,52 @@ class _LoginPageState extends State<LoginPage> {
                       AppGradientButton(
                         onPressed: isLoading ? null : _onLoginPressed,
                         child: isLoading
-                            ? const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
+                            ? SizedBox(
+                                width: double.infinity,
+                                height: 48,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 1.5,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Đang đăng nhập...',
+                                      style: AppTypography.bodyRegular1
+                                          .copyWith(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w700,
+                                            letterSpacing: -0.14,
+                                            color: Colors.white,
+                                          ),
+                                    ),
+                                  ],
                                 ),
                               )
-                            : Text(
-                                'Đăng nhập',
-                                style: AppTypography.header3.copyWith(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: -0.14,
-                                  color: Colors.white,
-                                ),
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    'Đăng nhập',
+                                    style: AppTypography.header3.copyWith(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: -0.14,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Icon(
+                                    Icons.login_outlined,
+                                    color: Colors.white,
+                                  ),
+                                ],
                               ),
                       ),
                       const SizedBox(height: 24),

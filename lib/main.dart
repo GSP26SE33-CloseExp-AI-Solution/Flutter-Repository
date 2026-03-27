@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
+import 'package:device_preview/device_preview.dart';
 import 'core/constants/mapbox_config.dart';
 import 'core/theme/app_theme.dart';
 import 'core/router/app_router.dart';
@@ -18,7 +20,12 @@ void main() async {
   // Initialize dependencies
   await initializeDependencies();
 
-  runApp(const CloseExpDeliveryApp());
+  runApp(
+    DevicePreview(
+      enabled: !kReleaseMode,
+      builder: (context) => const CloseExpDeliveryApp(),
+    ),
+  );
 }
 
 /// Root widget for CloseExp Delivery Staff App
@@ -51,6 +58,8 @@ class _CloseExpDeliveryAppState extends State<CloseExpDeliveryApp> {
     return MultiBlocProvider(
       providers: [BlocProvider<AuthBloc>.value(value: _authBloc)],
       child: MaterialApp.router(
+        locale: DevicePreview.locale(context),
+        builder: DevicePreview.appBuilder,
         title: 'CloseExp Delivery',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light(),
