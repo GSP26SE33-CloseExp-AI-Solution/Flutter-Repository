@@ -2,6 +2,7 @@
 ///
 /// This file contains all API-related constants including base URLs,
 /// endpoints, and timeout configurations.
+/// Vendor / siêu thị / SupermarketStaff (đơn, mã nhân viên) chỉ dùng trên web FE — không bổ sung vào app này.
 library;
 
 import 'dart:io' show Platform;
@@ -23,8 +24,8 @@ class ApiConstants {
     }
     // For iOS
     if (Platform.isIOS) {
-      // return 'http://192.168.1.13:5014/api'; // Real Device
-      return 'http://10.0.2.2:5014/api'; // iOS Emulator
+      // return 'http://192.168.1.13:5014/api'; // physical device on same LAN
+      return 'http://localhost:5014/api';
     }
     return 'http://localhost:5014/api';
   }
@@ -68,6 +69,10 @@ class ApiConstants {
   // Delivery Stats & History
   static const String deliveryHistory = '/delivery/history';
   static const String deliveryStats = '/delivery/stats';
+
+  /// Query `status` for GET /delivery/groups/my — BE treats as Assigned
+  static const String deliveryMyGroupsStatusActive = 'InTransit';
+  static const String deliveryMyGroupsStatusCompleted = 'Completed';
 
   // ============== UPLOAD ENDPOINTS ==============
   static const String upload = '/upload';

@@ -96,13 +96,14 @@ class DeliveryGroup extends Equatable {
   ];
 }
 
-/// Delivery Group Status Enum matching backend
-/// Backend values: "Pending", "Assigned", "InTransit", "Completed"
+/// Delivery Group Status Enum matching backend [DeliveryGroupState]
+/// Backend: Pending, Assigned, InTransit, Completed, Failed
 enum DeliveryGroupStatus {
   pending,
   assigned,
   inTransit,
-  completed;
+  completed,
+  failed;
 
   /// Parse status string from backend API
   static DeliveryGroupStatus fromString(String status) {
@@ -116,6 +117,8 @@ enum DeliveryGroupStatus {
         return DeliveryGroupStatus.inTransit;
       case 'completed':
         return DeliveryGroupStatus.completed;
+      case 'failed':
+        return DeliveryGroupStatus.failed;
       default:
         return DeliveryGroupStatus.pending;
     }
@@ -132,6 +135,8 @@ enum DeliveryGroupStatus {
         return 'InTransit';
       case DeliveryGroupStatus.completed:
         return 'Completed';
+      case DeliveryGroupStatus.failed:
+        return 'Failed';
     }
   }
 
@@ -145,6 +150,8 @@ enum DeliveryGroupStatus {
         return 'Đang giao';
       case DeliveryGroupStatus.completed:
         return 'Hoàn thành';
+      case DeliveryGroupStatus.failed:
+        return 'Thất bại';
     }
   }
 }

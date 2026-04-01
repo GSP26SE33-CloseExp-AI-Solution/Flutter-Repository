@@ -169,7 +169,9 @@ class DeliveryGroupCard extends StatelessWidget {
                   ],
 
                   // ── Action buttons
-                  if (showAcceptButton && group.isAvailable && onAccept != null) ...[
+                  if (showAcceptButton &&
+                      group.isAvailable &&
+                      onAccept != null) ...[
                     const SizedBox(height: 12),
                     AppGradientButton(
                       onPressed: onAccept,
@@ -219,16 +221,19 @@ class DeliveryGroupCard extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: const BoxDecoration(
-                border: Border(
-                  top: BorderSide(color: Color(0xFFE5E7EB)),
+                border: Border(top: BorderSide(color: Color(0xFFE5E7EB))),
+                borderRadius: BorderRadius.vertical(
+                  bottom: Radius.circular(24),
                 ),
-                borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
               ),
               child: Center(
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    DeliveryGroupStatusBadge(status: group.status, compact: true),
+                    DeliveryGroupStatusBadge(
+                      status: group.status,
+                      compact: true,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       'Nhấn để xem chi tiết đơn hàng',
@@ -344,7 +349,10 @@ class _SuccessGradientButton extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [AppColors.successGradientStart, AppColors.successGradientEnd],
+            colors: [
+              AppColors.successGradientStart,
+              AppColors.successGradientEnd,
+            ],
           ),
           borderRadius: BorderRadius.circular(20),
         ),

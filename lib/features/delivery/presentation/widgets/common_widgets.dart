@@ -373,15 +373,6 @@ class DeliveryEmptyState extends StatelessWidget {
           ],
           if (actionLabel != null && onAction != null) ...[
             const SizedBox(height: 40),
-            // ElevatedButton.icon(
-            //   style: ElevatedButton.styleFrom(
-            //     backgroundColor: AppColors.primaryGradientStart,
-            //     foregroundColor: Colors.white,
-            //   ),
-            //   onPressed: onAction,
-            //   icon: const Icon(Icons.refresh, color: Colors.white),
-            //   label: Text(actionLabel!),
-            // ),
             Padding(
               padding: EdgeInsets.symmetric(
                 // Responsive horizontal spacing: nhỏ màn -> padding nhỏ hơn,

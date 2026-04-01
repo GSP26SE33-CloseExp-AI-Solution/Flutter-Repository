@@ -42,7 +42,7 @@ class _DeliveryGroupDetailsPageState extends State<DeliveryGroupDetailsPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            color: AppColors.headerGradientEnd,
+            color: AppColors.neutralLight,
             onPressed: _loadGroupDetails,
             tooltip: 'Làm mới',
           ),
@@ -76,11 +76,17 @@ class _DeliveryGroupDetailsPageState extends State<DeliveryGroupDetailsPage> {
       _loadGroupDetails();
     } else if (state is DeliveryError) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(state.message), backgroundColor: AppColors.error),
+        SnackBar(
+          content: Text(state.message),
+          backgroundColor: AppColors.error,
+        ),
       );
     } else if (state is DeliveryActionError) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(state.message), backgroundColor: AppColors.error),
+        SnackBar(
+          content: Text(state.message),
+          backgroundColor: AppColors.error,
+        ),
       );
       _loadGroupDetails();
     }
@@ -99,7 +105,10 @@ class _DeliveryGroupDetailsPageState extends State<DeliveryGroupDetailsPage> {
     }
 
     if (state is DeliveryError) {
-      return DeliveryErrorState(message: state.message, onRetry: _loadGroupDetails);
+      return DeliveryErrorState(
+        message: state.message,
+        onRetry: _loadGroupDetails,
+      );
     }
 
     return const SizedBox.shrink();
@@ -114,9 +123,9 @@ class _DeliveryGroupDetailsPageState extends State<DeliveryGroupDetailsPage> {
       confirmColor: AppColors.successGradientEnd,
     );
     if (confirmed == true && mounted) {
-      context
-          .read<DeliveryBloc>()
-          .add(StartDelivery(groupId: group.deliveryGroupId));
+      context.read<DeliveryBloc>().add(
+        StartDelivery(groupId: group.deliveryGroupId),
+      );
     }
   }
 
@@ -128,9 +137,9 @@ class _DeliveryGroupDetailsPageState extends State<DeliveryGroupDetailsPage> {
       confirmLabel: 'Hoàn thành',
     );
     if (confirmed == true && mounted) {
-      context
-          .read<DeliveryBloc>()
-          .add(CompleteDeliveryGroup(groupId: group.deliveryGroupId));
+      context.read<DeliveryBloc>().add(
+        CompleteDeliveryGroup(groupId: group.deliveryGroupId),
+      );
     }
   }
 }
@@ -199,17 +208,28 @@ class _GroupDetailsContent extends StatelessWidget {
         children: [
           // Header
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text(
-                group.groupCode,
-                style: AppTypography.header2.copyWith(
-                  fontFamily: 'DM Sans',
-                  fontSize: 20,
-                  color: AppColors.textPrimary,
+              Expanded(
+                child: ClipRect(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    child: Text(
+                      group.groupCode,
+                      style: AppTypography.header2.copyWith(
+                        fontFamily: 'DM Sans',
+                        fontSize: 20,
+                        color: AppColors.textPrimary,
+                      ),
+                      maxLines: 1,
+                      softWrap: false,
+                    ),
+                  ),
                 ),
               ),
-              DeliveryGroupStatusBadge(status: group.status),
+              const SizedBox(width: 8),
+              DeliveryGroupStatusBadge(status: group.status, compact: true),
             ],
           ),
 
@@ -363,7 +383,10 @@ class _SuccessButton extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [AppColors.successGradientStart, AppColors.successGradientEnd],
+            colors: [
+              AppColors.successGradientStart,
+              AppColors.successGradientEnd,
+            ],
           ),
           borderRadius: BorderRadius.circular(20),
         ),

@@ -61,6 +61,8 @@ Color getGroupStatusColor(DeliveryGroupStatus status) {
       return const Color(0xFF7C3AED); // purple — in-transit
     case DeliveryGroupStatus.completed:
       return AppColors.successGradientStart;
+    case DeliveryGroupStatus.failed:
+      return AppColors.error;
   }
 }
 
@@ -72,6 +74,9 @@ Color getOrderStatusColor(DeliveryOrderStatus status) {
       return AppColors.primaryGradientStart; // orange
     case DeliveryOrderStatus.readyToShip:
       return AppColors.accent; // teal/green
+    case DeliveryOrderStatus.pickedUp:
+    case DeliveryOrderStatus.deliveryInTransit:
+      return const Color(0xFF2563EB); // blue — delivery leg
     case DeliveryOrderStatus.deliveredWaitConfirm:
       return const Color(0xFF7C3AED); // purple
     case DeliveryOrderStatus.completed:

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/constants/api_constants.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -60,13 +61,14 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
   }
 
   String? _getCurrentStatus() {
+    // TODO: Change how input filter state is handled
     switch (_tabController.index) {
       case 0:
-        return null; // All
+        return null; // ALl
       case 1:
-        return 'InProgress';
+        return DeliveryGroupStatus.inTransit.toApiString();
       case 2:
-        return 'Completed';
+        return DeliveryGroupStatus.completed.toApiString();
       default:
         return null;
     }

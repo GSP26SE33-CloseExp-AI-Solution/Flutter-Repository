@@ -13,18 +13,23 @@ class DeliveryOrder extends Equatable {
   final DateTime orderDate;
   final String customerName;
   final String customerPhone;
+
   /// Home delivery: maps from BE `addressLine` (CustomerAddress.AddressLine)
   final String? deliveryAddress;
+
   /// Pickup: maps from BE `collectionPointName` (CollectionPoint.Name)
   final String? pickupPointName;
+
   /// Not returned by BE in DeliveryOrderResponseDto (always null from API)
   final String? pickupPointAddress;
   final String? deliveryNote;
   final String timeSlotDisplay;
   final int totalItems;
   final List<DeliveryOrderItem> items;
+
   /// GPS coordinate of delivery/pickup location (from BE Latitude)
   final double? latitude;
+
   /// GPS coordinate of delivery/pickup location (from BE Longitude)
   final double? longitude;
 
@@ -49,15 +54,29 @@ class DeliveryOrder extends Equatable {
     this.longitude,
   });
 
+  /// BE uses string values like `HomeDelivery` / `Pickup` (see Order.DeliveryType), not `home` / `pickup`.
+  static String _normalizeDeliveryType(String raw) =>
+      raw.toLowerCase().replaceAll('_', '');
+
   /// Check if this is a home delivery
-  bool get isHomeDelivery => deliveryType.toLowerCase() == 'home';
+  bool get isHomeDelivery {
+    final t = _normalizeDeliveryType(deliveryType);
+    return t == 'home' || t == 'homedelivery';
+  }
 
   /// Check if this is a pickup order
-  bool get isPickup => deliveryType.toLowerCase() == 'pickup';
+  bool get isPickup {
+    final t = _normalizeDeliveryType(deliveryType);
+    return t == 'pickup' || t == 'storepickup';
+  }
 
-  /// Get the delivery destination address
-  String get destinationAddress =>
-      isHomeDelivery ? (deliveryAddress ?? '') : (pickupPointAddress ?? '');
+  /// Get the delivery destination address shown on cards (home: addressLine; pickup: point address or name)
+  String get destinationAddress {
+    if (isHomeDelivery) {
+      return deliveryAddress ?? '';
+    }
+    return pickupPointAddress ?? pickupPointName ?? '';
+  }
 
   /// Check if order is pending (not yet paid or processing)
   bool get isPending =>
@@ -106,8 +125,7 @@ class DeliveryOrder extends Equatable {
   ];
 }
 
-/// Delivery Order Status Enum matching backend OrderState enum
-/// Backend OrderState: Pending, Paid_Processing, Ready_To_Ship, Delivered_Wait_Confirm, Completed, Canceled, Refunded, Failed
+/// Order list/detail: [OrderState]. Delivery history rows: [DeliveryState] (PickedUp, InTransit, …).
 enum DeliveryOrderStatus {
   pending,
   paidProcessing,
@@ -116,7 +134,11 @@ enum DeliveryOrderStatus {
   completed,
   canceled,
   refunded,
-  failed;
+  failed,
+  /// [DeliveryState.PickedUp] in delivery logs / history API
+  pickedUp,
+  /// [DeliveryState.InTransit] in delivery logs / history API
+  deliveryInTransit;
 
   /// Parse status string from backend API
   static DeliveryOrderStatus fromString(String status) {
@@ -137,6 +159,10 @@ enum DeliveryOrderStatus {
         return DeliveryOrderStatus.refunded;
       case 'failed':
         return DeliveryOrderStatus.failed;
+      case 'pickedup':
+        return DeliveryOrderStatus.pickedUp;
+      case 'intransit':
+        return DeliveryOrderStatus.deliveryInTransit;
       default:
         return DeliveryOrderStatus.pending;
     }
@@ -161,6 +187,10 @@ enum DeliveryOrderStatus {
         return 'Refunded';
       case DeliveryOrderStatus.failed:
         return 'Failed';
+      case DeliveryOrderStatus.pickedUp:
+        return 'PickedUp';
+      case DeliveryOrderStatus.deliveryInTransit:
+        return 'InTransit';
     }
   }
 
@@ -182,6 +212,10 @@ enum DeliveryOrderStatus {
         return 'Đã hoàn tiền';
       case DeliveryOrderStatus.failed:
         return 'Thất bại';
+      case DeliveryOrderStatus.pickedUp:
+        return 'Đã lấy hàng';
+      case DeliveryOrderStatus.deliveryInTransit:
+        return 'Đang vận chuyển';
     }
   }
 }
@@ -222,8 +256,10 @@ class DeliveryRecord extends Equatable {
   final DeliveryOrderStatus status;
   final String? failureReason;
   final DateTime? deliveredAt;
+
   /// GPS coordinate recorded at delivery time (from BE DeliveryLog.DeliveryLatitude)
   final double? deliveryLatitude;
+
   /// GPS coordinate recorded at delivery time (from BE DeliveryLog.DeliveryLongitude)
   final double? deliveryLongitude;
 

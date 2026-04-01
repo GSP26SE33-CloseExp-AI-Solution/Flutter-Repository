@@ -37,7 +37,6 @@ class _DeliveryHistoryPageState extends State<DeliveryHistoryPage> {
     super.dispose();
   }
 
-  // BUG: Không thấy api cho filter được áp dụng
   void _loadHistory({bool refresh = false}) {
     context.read<DeliveryBloc>().add(
       LoadDeliveryHistory(
@@ -320,6 +319,7 @@ class _DeliveryHistoryPageState extends State<DeliveryHistoryPage> {
                 Text('Trạng thái:', style: AppTypography.header3),
                 const SizedBox(height: 8),
                 DropdownButton<String?>(
+                  key: ValueKey(_statusFilter),
                   dropdownColor: AppColors.neutralLight,
                   borderRadius: BorderRadius.circular(10),
                   padding: const EdgeInsets.symmetric(
@@ -332,12 +332,24 @@ class _DeliveryHistoryPageState extends State<DeliveryHistoryPage> {
                   items: const [
                     DropdownMenuItem(value: null, child: Text('Tất cả')),
                     DropdownMenuItem(
-                      value: 'Completed',
-                      child: Text('Hoàn thành'),
+                      value: 'ReadyToShip',
+                      child: Text('Sẵn sàng giao'),
                     ),
                     DropdownMenuItem(
-                      value: 'Delivered_Wait_Confirm',
+                      value: 'PickedUp',
+                      child: Text('Đã lấy hàng'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'InTransit',
+                      child: Text('Đang vận chuyển'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'DeliveredWaitConfirm',
                       child: Text('Chờ xác nhận'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'Completed',
+                      child: Text('Hoàn thành'),
                     ),
                     DropdownMenuItem(value: 'Failed', child: Text('Thất bại')),
                   ],
@@ -431,10 +443,16 @@ class _DeliveryHistoryPageState extends State<DeliveryHistoryPage> {
 
   String _getStatusDisplayName(String status) {
     switch (status) {
+      case 'ReadyToShip':
+        return 'Sẵn sàng giao';
+      case 'PickedUp':
+        return 'Đã lấy hàng';
+      case 'InTransit':
+        return 'Đang vận chuyển';
+      case 'DeliveredWaitConfirm':
+        return 'Chờ xác nhận';
       case 'Completed':
         return 'Hoàn thành';
-      case 'Delivered_Wait_Confirm':
-        return 'Chờ xác nhận';
       case 'Failed':
         return 'Thất bại';
       default:
