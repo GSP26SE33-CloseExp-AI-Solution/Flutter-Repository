@@ -75,7 +75,7 @@ class DeliveryRouteMapPage extends StatelessWidget {
             child: Container(
               decoration: const BoxDecoration(
                 color: Colors.white,
-                border: Border(top: BorderSide(color: Color(0xFFF2F4F6))),
+                border: Border(top: BorderSide(color: AppColors.cardBorder)),
               ),
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
               child: Column(
@@ -86,7 +86,7 @@ class DeliveryRouteMapPage extends StatelessWidget {
                     'Chọn lộ trình',
                     style: AppTypography.header3.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFF0A0A0A),
+                      color: AppColors.textPrimary,
                     ),
                   ),
                   if (groupId != null && groupId!.trim().isNotEmpty) ...[
@@ -165,7 +165,7 @@ class DeliveryRouteMapPage extends StatelessWidget {
     }
 
     return Container(
-      color: const Color(0xFFE5E7EB),
+      color: AppColors.dividerStrong,
       alignment: Alignment.center,
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Container(
@@ -226,8 +226,9 @@ class _RouteOption extends StatelessWidget {
   Widget build(BuildContext context) {
     final borderColor = isActive
         ? AppColors.headerGradientEnd
-        : const Color(0xFFE5E7EB);
-    final bgColor = isActive ? const Color(0xFFFEF2F2) : Colors.white;
+        : AppColors.dividerStrong;
+    final bgColor =
+        isActive ? AppColors.routeOptionActiveBackground : Colors.white;
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -243,7 +244,7 @@ class _RouteOption extends StatelessWidget {
             size: 16,
             color: isActive
                 ? AppColors.headerGradientEnd
-                : const Color(0xFF697282),
+                : AppColors.textSecondary,
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -254,7 +255,7 @@ class _RouteOption extends StatelessWidget {
                   title,
                   style: AppTypography.header3.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0A0A0A),
+                    color: AppColors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -262,7 +263,7 @@ class _RouteOption extends StatelessWidget {
                   subtitle,
                   style: AppTypography.bodyRegular1.copyWith(
                     fontSize: 12,
-                    color: const Color(0xFF697282),
+                    color: AppColors.textSecondary,
                   ),
                 ),
               ],

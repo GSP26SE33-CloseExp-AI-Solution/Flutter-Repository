@@ -122,7 +122,7 @@ class AppGradientButton extends StatelessWidget {
               ? null
               : [
                   BoxShadow(
-                    color: const Color(0xFFC94210).withValues(alpha: 0.10),
+                    color: AppColors.primaryButtonShadow.withValues(alpha: 0.10),
                     blurRadius: 30,
                     offset: const Offset(0, 10),
                   ),
@@ -444,12 +444,12 @@ class DeliveryEmptyState extends StatelessWidget {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.refresh, color: Colors.white),
+                        Icon(Icons.refresh, color: AppColors.neutralLight),
                         const SizedBox(width: 8),
                         Text(
                           actionLabel!,
                           style: AppTypography.subHeader.copyWith(
-                            color: Colors.white,
+                            color: AppColors.neutralLight,
                           ),
                         ),
                       ],
@@ -602,7 +602,7 @@ class DeliveryNoteCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: backgroundColor ?? const Color(0xFFFFFBEB),
+        color: backgroundColor ?? AppColors.deliveryNoteBackground,
         border: Border.all(
           color:
               borderColor ??

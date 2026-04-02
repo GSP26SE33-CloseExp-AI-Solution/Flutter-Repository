@@ -100,15 +100,15 @@ class DeliveryGroupCard extends StatelessWidget {
                               children: [
                                 _Pill(
                                   text: '${group.totalOrders} đơn hàng',
-                                  background: const Color(0xFFFFE2E2),
-                                  textColor: const Color(0xFFE7000B),
+                                  background: AppColors.badgeUrgentBackground,
+                                  textColor: AppColors.badgeUrgentText,
                                 ),
                                 if (group.pendingOrders > 0) ...[
                                   const SizedBox(width: 6),
                                   _Pill(
                                     text: '${group.pendingOrders} chờ giao',
-                                    background: const Color(0xFFFFEDD4),
-                                    textColor: const Color(0xFFF44900),
+                                    background: AppColors.badgePendingBackground,
+                                    textColor: AppColors.badgePendingText,
                                   ),
                                 ],
                               ],

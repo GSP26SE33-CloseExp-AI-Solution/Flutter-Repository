@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/error/exceptions.dart';
@@ -29,11 +31,17 @@ abstract class DeliveryRemoteDataSource {
 
   // Delivery Orders
   Future<DeliveryOrderModel> getOrderDetails(String orderId);
+  /// BE: POST multipart `file` → dùng URL trả về cho [confirmDelivery].
+  Future<String> uploadDeliveryProofImage(
+    String orderId,
+    String localFilePath,
+  );
+  /// BE [ConfirmDeliveryRequestDto]: proofImageUrl + verificationCode là bắt buộc.
   Future<DeliveryOrderModel> confirmDelivery(
     String orderId, {
-    String? proofImageUrl,
+    required String proofImageUrl,
+    required String verificationCode,
     String? notes,
-    String? verificationCode,
   });
   Future<DeliveryOrderModel> reportDeliveryFailure(
     String orderId, {
@@ -195,18 +203,66 @@ class DeliveryRemoteDataSourceImpl implements DeliveryRemoteDataSource {
   }
 
   @override
+  Future<String> uploadDeliveryProofImage(
+    String orderId,
+    String localFilePath,
+  ) async {
+    try {
+      final file = File(localFilePath);
+      final fileName = file.path.replaceAll(r'\', '/').split('/').last;
+      final mimeType = _mimeTypeForFileName(fileName);
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(
+          file.path,
+          filename: fileName,
+          contentType: DioMediaType.parse(mimeType),
+        ),
+      });
+      final response = await _dio.post(
+        ApiConstants.deliveryOrderProofImage(orderId),
+        data: formData,
+        options: Options(contentType: 'multipart/form-data'),
+      );
+      if (response.statusCode == 200) {
+        final apiResponse = response.data as Map<String, dynamic>;
+        if (apiResponse['success'] == true) {
+          final data = apiResponse['data'] as Map<String, dynamic>;
+          final url = (data['proofImageUrl'] as String?)?.trim() ?? '';
+          if (url.isEmpty) {
+            throw ServerException(
+              message: 'Phản hồi upload thiếu proofImageUrl',
+            );
+          }
+          return url;
+        }
+        throw ServerException(
+          message: apiResponse['message'] ?? 'Upload ảnh chứng minh thất bại',
+        );
+      }
+      throw ServerException(
+        message: 'Upload ảnh chứng minh thất bại',
+        statusCode: response.statusCode,
+      );
+    } on DioException {
+      rethrow;
+    } catch (e) {
+      if (e is ServerException) rethrow;
+      throw ServerException(message: 'Upload ảnh chứng minh thất bại: $e');
+    }
+  }
+
+  @override
   Future<DeliveryOrderModel> confirmDelivery(
     String orderId, {
-    String? proofImageUrl,
+    required String proofImageUrl,
+    required String verificationCode,
     String? notes,
-    String? verificationCode,
   }) async {
     try {
       final data = <String, dynamic>{
-        if (proofImageUrl != null) 'proofImageUrl': proofImageUrl,
-        if (notes != null) 'notes': notes,
-        if (verificationCode != null && verificationCode.trim().isNotEmpty)
-          'verificationCode': verificationCode.trim(),
+        'proofImageUrl': proofImageUrl.trim(),
+        'verificationCode': verificationCode.trim(),
+        if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
       };
       final response = await _dio.post(
         ApiConstants.confirmDelivery(orderId),
@@ -402,6 +458,16 @@ class DeliveryRemoteDataSourceImpl implements DeliveryRemoteDataSource {
       message: 'Yêu cầu thất bại',
       statusCode: response.statusCode,
     );
+  }
+
+  static String _mimeTypeForFileName(String fileName) {
+    final extension = fileName.split('.').last.toLowerCase();
+    if (extension == 'jpg' || extension == 'jpeg') return 'image/jpeg';
+    if (extension == 'png') return 'image/png';
+    if (extension == 'gif') return 'image/gif';
+    if (extension == 'webp') return 'image/webp';
+    if (extension == 'bmp') return 'image/bmp';
+    return 'application/octet-stream';
   }
 }
 

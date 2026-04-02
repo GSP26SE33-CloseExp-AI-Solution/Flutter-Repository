@@ -269,6 +269,9 @@ class DeliveryRecord extends Equatable {
   /// GPS coordinate recorded at delivery time (from BE DeliveryLog.DeliveryLongitude)
   final double? deliveryLongitude;
 
+  /// URL ảnh chứng minh (BE DeliveryRecordResponseDto.proofImageUrl)
+  final String? proofImageUrl;
+
   const DeliveryRecord({
     required this.deliveryId,
     required this.orderId,
@@ -280,6 +283,7 @@ class DeliveryRecord extends Equatable {
     this.deliveredAt,
     this.deliveryLatitude,
     this.deliveryLongitude,
+    this.proofImageUrl,
   });
 
   @override
@@ -294,5 +298,6 @@ class DeliveryRecord extends Equatable {
     deliveredAt,
     deliveryLatitude,
     deliveryLongitude,
+    proofImageUrl,
   ];
 }

@@ -11,7 +11,7 @@ import '../entities/delivery_stats.dart';
 abstract class DeliveryRepository {
   // ============== DELIVERY GROUPS ==============
 
-  /// Get available delivery groups that can be accepted
+  /// Nhóm Pending đã được admin gán cho shipper đăng nhập — chờ Accept
   Future<Either<Failure, List<DeliveryGroupSummary>>> getAvailableGroups({
     DateTime? deliveryDate,
   });
@@ -47,12 +47,18 @@ abstract class DeliveryRepository {
   /// Get order details for delivery
   Future<Either<Failure, DeliveryOrder>> getOrderDetails(String orderId);
 
-  /// Confirm successful delivery with proof image
+  /// Upload ảnh chứng minh — BE `POST /delivery/orders/{id}/proof-image` (field `file`).
+  Future<Either<Failure, String>> uploadDeliveryProofImage(
+    String orderId,
+    String localFilePath,
+  );
+
+  /// Xác nhận giao — BE bắt buộc [proofImageUrl] (http/https) và [verificationCode] (khớp orderCode).
   Future<Either<Failure, DeliveryOrder>> confirmDelivery(
     String orderId, {
-    String? proofImageUrl,
+    required String proofImageUrl,
+    required String verificationCode,
     String? notes,
-    String? verificationCode,
   });
 
   /// Report delivery failure

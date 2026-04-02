@@ -60,7 +60,6 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
   }
 
   String? _getCurrentStatus() {
-    // TODO: Change how input filter state is handled
     switch (_tabController.index) {
       case 0:
         return null; // ALl
@@ -109,7 +108,7 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
           actions: [
             IconButton(
               icon: const Icon(Icons.refresh),
-              color: AppColors.headerGradientEnd,
+              color: AppColors.neutralLight,
               onPressed: () => _loadGroups(refresh: true),
               tooltip: 'Làm mới',
             ),
@@ -152,7 +151,9 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
       _loadGroups(refresh: true);
       final gid = state.group.deliveryGroupId.trim();
       if (gid.isNotEmpty && context.mounted) {
-        context.push('${Routes.deliveryMap}?groupId=${Uri.encodeComponent(gid)}');
+        context.push(
+          '${Routes.deliveryMap}?groupId=${Uri.encodeComponent(gid)}',
+        );
       }
     } else if (state is DeliveryGroupCompleted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -259,6 +260,7 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
       confirmColor: AppColors.successGradientEnd,
     );
     if (confirmed == true && mounted) {
+      // FIX: hiển thị bị lỗi
       context.read<DeliveryBloc>().add(
         StartDelivery(groupId: group.deliveryGroupId),
       );

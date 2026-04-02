@@ -263,6 +263,17 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
   ) async {
     emit(const DeliveryLoading(message: 'Đang xác nhận giao hàng...'));
 
+    final verification = event.verificationCode?.trim() ?? '';
+    if (verification.isEmpty) {
+      emit(
+        const DeliveryActionError(
+          message:
+              'Cần mã xác nhận khớp mã đơn (orderCode), theo ConfirmDeliveryRequestDto của BE.',
+        ),
+      );
+      return;
+    }
+
     final groupId = event.deliveryGroupId?.trim();
     if (groupId != null && groupId.isNotEmpty) {
       final startRes = await _repository.startDelivery(groupId);
@@ -273,11 +284,38 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
       }
     }
 
+    // BE bắt buộc proofImageUrl (URL http/https); ưu tiên URL có sẵn, không thì upload proof-image.
+    var proofUrl = event.proofImageUrl?.trim() ?? '';
+    if (proofUrl.isEmpty) {
+      final path = event.proofImagePath?.trim();
+      if (path == null || path.isEmpty) {
+        emit(
+          const DeliveryActionError(
+            message:
+                'Cần ảnh chứng minh: chọn ảnh để gửi POST /delivery/orders/{id}/proof-image (field file).',
+          ),
+        );
+        return;
+      }
+      final uploadRes = await _repository.uploadDeliveryProofImage(
+        event.orderId,
+        path,
+      );
+      proofUrl = uploadRes.fold(
+        (f) {
+          emit(DeliveryActionError(message: f.message));
+          return '';
+        },
+        (url) => url,
+      );
+      if (proofUrl.isEmpty) return;
+    }
+
     final result = await _repository.confirmDelivery(
       event.orderId,
-      proofImageUrl: event.proofImageUrl,
+      proofImageUrl: proofUrl,
+      verificationCode: verification,
       notes: event.notes,
-      verificationCode: event.verificationCode,
     );
 
     result.fold(

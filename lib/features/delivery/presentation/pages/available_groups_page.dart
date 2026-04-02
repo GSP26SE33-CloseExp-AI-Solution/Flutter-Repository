@@ -10,7 +10,7 @@ import '../bloc/delivery_event.dart';
 import '../bloc/delivery_state.dart';
 import '../widgets/widgets.dart';
 
-/// Screen 1 — Available Groups: shows delivery groups available to accept.
+/// Nhóm admin đã gán cho shipper hiện tại, trạng thái Pending — cần Accept trước khi Start.
 class AvailableGroupsPage extends StatefulWidget {
   const AvailableGroupsPage({super.key});
   @override
@@ -44,7 +44,7 @@ class _AvailableGroupsPageState extends State<AvailableGroupsPage> {
             actions: [
               IconButton(
                 icon: const Icon(Icons.refresh),
-                color: AppColors.headerGradientEnd,
+                color: Colors.white,
                 onPressed: _loadGroups,
                 tooltip: 'Làm mới',
               ),

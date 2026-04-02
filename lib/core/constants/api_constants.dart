@@ -64,6 +64,9 @@ class ApiConstants {
   static String deliveryOrderById(String id) => '/delivery/orders/$id';
   static String confirmDelivery(String id) =>
       '/delivery/orders/$id/confirm-delivery';
+  /// Multipart field name: `file` — trả về `data.proofImageUrl` (DeliveryProofUploadResponseDto).
+  static String deliveryOrderProofImage(String orderId) =>
+      '/delivery/orders/$orderId/proof-image';
   static String reportDeliveryFailure(String id) =>
       '/delivery/orders/$id/report-failure';
 
@@ -71,7 +74,7 @@ class ApiConstants {
   static const String deliveryHistory = '/delivery/history';
   static const String deliveryStats = '/delivery/stats';
 
-  /// Query `status` for GET /delivery/groups/my — BE treats as Assigned
+  /// Query `status` cho GET /delivery/groups/my — khớp chuỗi trạng thái nhóm trên BE (vd. InTransit).
   static const String deliveryMyGroupsStatusActive = 'InTransit';
   static const String deliveryMyGroupsStatusCompleted = 'Completed';
 

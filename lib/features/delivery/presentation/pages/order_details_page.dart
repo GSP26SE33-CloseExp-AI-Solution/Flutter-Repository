@@ -83,11 +83,17 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
         },
         builder: (context, state) {
           if (state is DeliveryLoading) {
-            return const DeliveryLoadingState(message: 'Đang tải chi tiết đơn hàng...');
+            return const DeliveryLoadingState(
+              message: 'Đang tải chi tiết đơn hàng...',
+            );
           }
-          if (state is OrderDetailsLoaded) return _buildOrderDetails(state.order);
+          if (state is OrderDetailsLoaded)
+            return _buildOrderDetails(state.order);
           if (state is DeliveryError) {
-            return DeliveryErrorState(message: state.message, onRetry: _loadOrderDetails);
+            return DeliveryErrorState(
+              message: state.message,
+              onRetry: _loadOrderDetails,
+            );
           }
           return const SizedBox.shrink();
         },
@@ -96,8 +102,11 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
   }
 
   Widget _buildOrderDetails(DeliveryOrder order) {
-    final currencyFormat =
-        NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
+    final currencyFormat = NumberFormat.currency(
+      locale: 'vi_VN',
+      symbol: '₫',
+      decimalDigits: 0,
+    );
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
 
     return SingleChildScrollView(
@@ -152,11 +161,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                 ),
                 Row(
                   children: [
-                    SvgPicture.asset(
-                      AppIcons.phone,
-                      width: 20,
-                      height: 20,
-                    ),
+                    SvgPicture.asset(AppIcons.phone, width: 20, height: 20),
                     const SizedBox(width: 12),
                     Text(
                       'SĐT: ',
@@ -181,7 +186,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                         width: 40,
                         height: 40,
                         decoration: const BoxDecoration(
-                          color: Color(0xFFDCFCE7),
+                          color: AppColors.callActionBackground,
                           shape: BoxShape.circle,
                         ),
                         child: Center(
@@ -218,8 +223,9 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                       decoration: BoxDecoration(
                         color: order.isHomeDelivery
                             ? AppColors.accent.withValues(alpha: 0.1)
-                            : AppColors.successGradientStart
-                                .withValues(alpha: 0.1),
+                            : AppColors.successGradientStart.withValues(
+                                alpha: 0.1,
+                              ),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -265,7 +271,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                               Text(
                                 order.deliveryAddress ?? 'Chưa có địa chỉ',
                                 style: AppTypography.header3.copyWith(
-                                  color: const Color(0xFF495565),
+                                  color: AppColors.bodyOnSurface,
                                 ),
                               ),
                             ],
@@ -283,7 +289,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                               vertical: 8,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF2B7FFF),
+                              color: AppColors.directionsBlue,
                               borderRadius: BorderRadius.circular(14),
                             ),
                             child: Text(
@@ -333,7 +339,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                             vertical: 8,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF2B7FFF),
+                            color: AppColors.directionsBlue,
                             borderRadius: BorderRadius.circular(14),
                           ),
                           child: Text(
@@ -372,11 +378,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                   ),
                   child: Row(
                     children: [
-                      SvgPicture.asset(
-                        AppIcons.clock,
-                        width: 20,
-                        height: 20,
-                      ),
+                      SvgPicture.asset(AppIcons.clock, width: 20, height: 20),
                       const SizedBox(width: 8),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -412,11 +414,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                   ),
                   child: Row(
                     children: [
-                      SvgPicture.asset(
-                        AppIcons.package,
-                        width: 20,
-                        height: 20,
-                      ),
+                      SvgPicture.asset(AppIcons.package, width: 20, height: 20),
                       const SizedBox(width: 8),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -454,8 +452,9 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
               children: [
                 _SectionTitle('Sản phẩm (${order.totalItems})'),
                 const Divider(color: AppColors.cardBorder),
-                ...order.items
-                    .map((item) => _buildItemRow(item, currencyFormat)),
+                ...order.items.map(
+                  (item) => _buildItemRow(item, currencyFormat),
+                ),
                 const Divider(color: AppColors.cardBorder),
 
                 // Subtotals
@@ -482,7 +481,10 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                   ),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [Color(0xFFFFF7EC), Color(0xFFFEF2F2)],
+                      colors: [
+                        AppColors.orderTotalGradientStart,
+                        AppColors.orderTotalGradientEnd,
+                      ],
                     ),
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -562,13 +564,13 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
             width: 47.99,
             height: 47.99,
             decoration: BoxDecoration(
-              color: const Color(0xFFFFEDD4),
+              color: AppColors.badgePendingBackground,
               borderRadius: BorderRadius.circular(16),
             ),
             child: const Icon(
               Icons.fastfood_outlined,
               size: 24,
-              color: Color(0xFFF44900),
+              color: AppColors.badgePendingText,
             ),
           ),
           const SizedBox(width: 12),
@@ -613,12 +615,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     if (await canLaunchUrl(uri)) await launchUrl(uri);
   }
 
-  /// Mở Google Maps (search API) — tránh `canLaunchUrl` trên Android 11+ (hay trả false).
-  Future<void> _openMaps(
-    String address, {
-    double? lat,
-    double? lng,
-  }) async {
+  Future<void> _openMaps(String address, {double? lat, double? lng}) async {
     final trimmed = address.trim();
     late final Uri uri;
     if (lat != null && lng != null) {
@@ -665,7 +662,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Ảnh bằng chứng (tùy chọn)',
+                  'Ảnh bằng chứng (bắt buộc — BE proof-image + confirm-delivery)',
                   style: AppTypography.header3.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
@@ -694,9 +691,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                           imageQuality: 85,
                         );
                         if (picked != null) {
-                          setDialogState(
-                            () => localSelectedPath = picked.path,
-                          );
+                          setDialogState(() => localSelectedPath = picked.path);
                         }
                       },
                       icon: const Icon(Icons.photo_library),
@@ -739,6 +734,17 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
               ),
               child: TextButton(
                 onPressed: () {
+                  if (localSelectedPath == null || localSelectedPath!.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Vui lòng chọn ảnh chứng minh — API bắt buộc proofImageUrl.',
+                        ),
+                        backgroundColor: AppColors.error,
+                      ),
+                    );
+                    return;
+                  }
                   Navigator.pop(context);
                   _selectedProofImagePath = localSelectedPath;
                   context.read<DeliveryBloc>().add(
@@ -746,6 +752,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                       orderId: order.orderId,
                       deliveryGroupId: order.deliveryGroupId,
                       proofImagePath: localSelectedPath,
+                      verificationCode: order.orderCode.trim(),
                     ),
                   );
                 },
@@ -764,33 +771,74 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     );
   }
 
-  /// Chuỗi gửi BE là [order.orderCode] khi mã đơn nằm trong payload quét được.
+  static String _normalizeForVerify(String x) =>
+      x.toLowerCase().replaceAll(RegExp(r'\s+'), '');
+
+  /// Chuỗi gửi BE là [order.orderCode] khi payload quét/nhập chứa đúng mã đơn.
+  /// BE chỉ so với [Order.OrderCode], không so với orderId.
   String? _verificationCodeFromScan(String scanned, DeliveryOrder order) {
     final s = scanned.trim();
     final code = order.orderCode.trim();
     if (s.isEmpty || code.isEmpty) return null;
-    if (s.toLowerCase() == code.toLowerCase()) return code;
-    if (s.toLowerCase().contains(code.toLowerCase())) return code;
+    final ns = _normalizeForVerify(s);
+    final nc = _normalizeForVerify(code);
+    if (ns == nc) return code;
+    if (ns.contains(nc)) return code;
     return null;
   }
 
   Future<void> _openQrScan(DeliveryOrder order) async {
     final qrCode = await showQrScanModal(context);
     if (!mounted || qrCode == null || qrCode.trim().isEmpty) return;
-    final verification = _verificationCodeFromScan(qrCode, order);
-    if (verification == null) {
+
+    if (order.orderCode.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Mã QR không khớp mã đơn hàng. Vui lòng quét lại.'),
+          content: Text(
+            'Ứng dụng chưa có mã đơn (orderCode). Kéo xuống làm mới trang hoặc mở lại đơn.',
+          ),
           backgroundColor: AppColors.error,
         ),
       );
       return;
     }
+
+    final verification = _verificationCodeFromScan(qrCode, order);
+    if (verification == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Mã vừa nhập không trùng mã đơn ${order.orderCode}. '
+            'QR phải chứa đúng mã này (BE so khớp orderCode, không dùng orderId).',
+          ),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    final picked = await _imagePicker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+    );
+    if (!mounted) return;
+    if (picked == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Cần ảnh chứng minh sau khi quét QR — upload proof-image là bắt buộc.',
+          ),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
     context.read<DeliveryBloc>().add(
       ConfirmDelivery(
         orderId: order.orderId,
         deliveryGroupId: order.deliveryGroupId,
+        proofImagePath: picked.path,
         verificationCode: verification,
         notes: 'Xác nhận bằng QR',
       ),
@@ -881,14 +929,8 @@ class _PriceRow extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: AppTypography.header3.copyWith(color: labelColor),
-        ),
-        Text(
-          value,
-          style: AppTypography.header3.copyWith(color: valueColor),
-        ),
+        Text(label, style: AppTypography.header3.copyWith(color: labelColor)),
+        Text(value, style: AppTypography.header3.copyWith(color: valueColor)),
       ],
     );
   }
@@ -913,7 +955,10 @@ class _SuccessGradientButton extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [AppColors.successGradientStart, AppColors.successGradientEnd],
+            colors: [
+              AppColors.successGradientStart,
+              AppColors.successGradientEnd,
+            ],
           ),
           borderRadius: BorderRadius.circular(16),
         ),

@@ -137,11 +137,13 @@ class ConfirmDelivery extends DeliveryEvent {
   /// Gọi API start-delivery trước (nhóm chuyển InTransit) khi có giá trị.
   final String? deliveryGroupId;
 
+  /// File local — BLoC upload lên `POST .../proof-image` trước khi confirm.
   final String? proofImagePath;
+  /// URL https đã có (sau upload); nếu có thì bỏ qua [proofImagePath].
   final String? proofImageUrl;
   final String? notes;
 
-  /// Gửi BE khi xác nhận bằng QR; phải khớp [orderCode]. Null = xác nhận không QR.
+  /// Bắt buộc với BE: phải khớp orderCode (QR, nhập tay, hoặc gửi mã đơn khi xác nhận tay).
   final String? verificationCode;
 
   const ConfirmDelivery({

@@ -39,8 +39,8 @@ class UploadDataSourceImpl implements UploadDataSource {
       });
 
       final response = await _dio.post(
-        // Use /upload/test: accepts only a file, returns { key, url }
-        // /upload requires productId (product image upload — wrong for delivery proof)
+        // Chứng minh giao hàng: dùng DeliveryRemoteDataSource.uploadDeliveryProofImage
+        // (POST /delivery/orders/{id}/proof-image). Đây là /upload/test (generic).
         ApiConstants.uploadTest,
         data: formData,
         options: Options(contentType: 'multipart/form-data'),
@@ -70,6 +70,7 @@ class UploadDataSourceImpl implements UploadDataSource {
       });
 
       final response = await _dio.post(
+        // Generic test upload — không dùng cho proof giao hàng (xem DeliveryRemoteDataSource).
         ApiConstants.uploadTest,
         data: formData,
         options: Options(contentType: 'multipart/form-data'),

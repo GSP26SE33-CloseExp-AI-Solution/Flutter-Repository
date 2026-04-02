@@ -39,7 +39,7 @@ Future<DeliveryFailureResult?> showDeliveryFailureSheet(
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 12),
                 decoration: BoxDecoration(
-                  color: AppColors.neutralMid,
+                  color: AppColors.disabledControlFill,
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),
@@ -97,11 +97,11 @@ Future<DeliveryFailureResult?> showDeliveryFailureSheet(
                   hintText: 'Chọn lý do',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(color: AppColors.neutralLight),
+                    borderSide: BorderSide(color: AppColors.inputBorderStrong),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(color: AppColors.neutralLight),
+                    borderSide: BorderSide(color: AppColors.inputBorderStrong),
                   ),
                 ),
               ),
@@ -112,16 +112,14 @@ Future<DeliveryFailureResult?> showDeliveryFailureSheet(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFEFCE8),
-                  border: Border.all(
-                    color: AppColors.primaryGradientStart.withValues(alpha: 0.5),
-                  ),
+                  color: AppColors.warningNoticeBackground,
+                  border: Border.all(color: AppColors.warningNoticeBorder),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: RichText(
                   text: TextSpan(
                     style: AppTypography.header3.copyWith(
-                      color: const Color(0xFF884A00),
+                      color: AppColors.warningNoticeText,
                       fontSize: 14,
                     ),
                     children: const [

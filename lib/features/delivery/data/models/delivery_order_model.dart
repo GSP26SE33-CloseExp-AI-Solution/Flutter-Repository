@@ -141,6 +141,7 @@ class DeliveryRecordModel extends DeliveryRecord {
     super.deliveredAt,
     super.deliveryLatitude,
     super.deliveryLongitude,
+    super.proofImageUrl,
   });
 
   factory DeliveryRecordModel.fromJson(Map<String, dynamic> json) {
@@ -155,6 +156,7 @@ class DeliveryRecordModel extends DeliveryRecord {
       deliveredAt: _parseNullableDateTime(json['deliveredAt']),
       deliveryLatitude: (json['deliveryLatitude'] as num?)?.toDouble(),
       deliveryLongitude: (json['deliveryLongitude'] as num?)?.toDouble(),
+      proofImageUrl: json['proofImageUrl'] as String?,
     );
   }
 
@@ -170,6 +172,7 @@ class DeliveryRecordModel extends DeliveryRecord {
       'deliveredAt': deliveredAt?.toIso8601String(),
       'deliveryLatitude': deliveryLatitude,
       'deliveryLongitude': deliveryLongitude,
+      'proofImageUrl': proofImageUrl,
     };
   }
 

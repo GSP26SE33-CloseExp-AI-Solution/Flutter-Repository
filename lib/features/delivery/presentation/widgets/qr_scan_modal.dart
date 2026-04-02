@@ -180,11 +180,15 @@ class _QrScanModalContentState extends State<_QrScanModalContent> {
           ),
           Opacity(
             opacity: 0.90,
-            child: Text(
-              'Quét mã QR từ đơn hàng của khách hàng',
-              style: AppTypography.header3.copyWith(
-                color: Colors.white,
-                fontSize: 13,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                'Quét mã QR từ đơn hàng của khách hàng',
+                style: AppTypography.bodyRegular1.copyWith(
+                  color: Colors.white,
+                  fontSize: 12,
+                ),
+                textAlign: TextAlign.center,
               ),
             ),
           ),
@@ -230,6 +234,8 @@ class _QrScanModalContentState extends State<_QrScanModalContent> {
         final side = (w * 0.55).clamp(120.0, 220.0);
         final left = (w - side) / 2;
         final top = (h - side) / 2.15;
+        // Visual guide only. Do not pass scanWindow: on Android/iOS the native ROI
+        // often misaligns with this Rect, so QR in front of the camera is never decoded.
         final scanRect = Rect.fromLTWH(left, top, side, side);
 
         return Stack(
@@ -239,7 +245,7 @@ class _QrScanModalContentState extends State<_QrScanModalContent> {
               controller: _scannerController,
               onDetect: _onBarcodeDetected,
               fit: BoxFit.cover,
-              scanWindow: kIsWeb ? null : scanRect,
+              scanWindow: null,
               errorBuilder: (context, error) => _ScannerErrorView(error: error),
             ),
             IgnorePointer(
@@ -277,7 +283,7 @@ class _QrScanModalContentState extends State<_QrScanModalContent> {
 
   Widget _buildPlaceholderScanner() {
     return ColoredBox(
-      color: const Color(0xFF101828),
+      color: AppColors.qrViewfinderBackground,
       child: Stack(
         children: [
           Center(
@@ -362,7 +368,9 @@ class _QrScanModalContentState extends State<_QrScanModalContent> {
       width: double.infinity,
       padding: const EdgeInsets.only(top: 25.18),
       decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: Color(0xFFE5E7EB), width: 1.18)),
+        border: Border(
+          top: BorderSide(color: AppColors.dividerStrong, width: 1.18),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -410,7 +418,7 @@ class _QrScanModalContentState extends State<_QrScanModalContent> {
                               ],
                             )
                           : null,
-                      color: hasCode ? null : const Color(0xFFD1D5DC),
+                      color: hasCode ? null : AppColors.disabledControlFill,
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Material(
@@ -492,8 +500,8 @@ class _StaticViewfinderCorners extends StatelessWidget {
             height: 31.98,
             decoration: const BoxDecoration(
               border: Border(
-                left: BorderSide(color: Color(0xFF05DF72), width: 3.55),
-                top: BorderSide(color: Color(0xFF05DF72), width: 3.55),
+                left: BorderSide(color: AppColors.qrCornerAccent, width: 3.55),
+                top: BorderSide(color: AppColors.qrCornerAccent, width: 3.55),
               ),
               borderRadius: BorderRadius.only(topLeft: Radius.circular(14)),
             ),
@@ -507,8 +515,8 @@ class _StaticViewfinderCorners extends StatelessWidget {
             height: 31.98,
             decoration: const BoxDecoration(
               border: Border(
-                right: BorderSide(color: Color(0xFF05DF72), width: 3.55),
-                top: BorderSide(color: Color(0xFF05DF72), width: 3.55),
+                right: BorderSide(color: AppColors.qrCornerAccent, width: 3.55),
+                top: BorderSide(color: AppColors.qrCornerAccent, width: 3.55),
               ),
               borderRadius: BorderRadius.only(topRight: Radius.circular(14)),
             ),
@@ -522,8 +530,8 @@ class _StaticViewfinderCorners extends StatelessWidget {
             height: 31.98,
             decoration: const BoxDecoration(
               border: Border(
-                left: BorderSide(color: Color(0xFF05DF72), width: 3.55),
-                bottom: BorderSide(color: Color(0xFF05DF72), width: 3.55),
+                left: BorderSide(color: AppColors.qrCornerAccent, width: 3.55),
+                bottom: BorderSide(color: AppColors.qrCornerAccent, width: 3.55),
               ),
               borderRadius: BorderRadius.only(bottomLeft: Radius.circular(14)),
             ),
@@ -537,8 +545,8 @@ class _StaticViewfinderCorners extends StatelessWidget {
             height: 31.98,
             decoration: const BoxDecoration(
               border: Border(
-                right: BorderSide(color: Color(0xFF05DF72), width: 3.55),
-                bottom: BorderSide(color: Color(0xFF05DF72), width: 3.55),
+                right: BorderSide(color: AppColors.qrCornerAccent, width: 3.55),
+                bottom: BorderSide(color: AppColors.qrCornerAccent, width: 3.55),
               ),
               borderRadius: BorderRadius.only(bottomRight: Radius.circular(14)),
             ),
@@ -557,7 +565,7 @@ class _ScannerErrorView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
-      color: const Color(0xFF101828),
+      color: AppColors.qrViewfinderBackground,
       child: Center(
         child: Padding(
           padding: const EdgeInsets.all(16),
