@@ -13,7 +13,6 @@ import '../widgets/widgets.dart';
 /// Screen 1 — Available Groups: shows delivery groups available to accept.
 class AvailableGroupsPage extends StatefulWidget {
   const AvailableGroupsPage({super.key});
- // TODO: Fix color the match app theme
   @override
   State<AvailableGroupsPage> createState() => _AvailableGroupsPageState();
 }
@@ -43,12 +42,12 @@ class _AvailableGroupsPageState extends State<AvailableGroupsPage> {
             title: 'Đơn hàng cần giao',
             subtitle: subtitle,
             actions: [
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              color: AppColors.headerGradientEnd,
-              onPressed: _loadGroups,
-              tooltip: 'Làm mới',
-            ),
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                color: AppColors.headerGradientEnd,
+                onPressed: _loadGroups,
+                tooltip: 'Làm mới',
+              ),
             ],
           ),
           body: _buildBody(context, state),
@@ -68,11 +67,17 @@ class _AvailableGroupsPageState extends State<AvailableGroupsPage> {
       _loadGroups();
     } else if (state is DeliveryError) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(state.message), backgroundColor: AppColors.error),
+        SnackBar(
+          content: Text(state.message),
+          backgroundColor: AppColors.error,
+        ),
       );
     } else if (state is DeliveryActionError) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(state.message), backgroundColor: AppColors.error),
+        SnackBar(
+          content: Text(state.message),
+          backgroundColor: AppColors.error,
+        ),
       );
       _loadGroups();
     }
@@ -114,8 +119,9 @@ class _AvailableGroupsPageState extends State<AvailableGroupsPage> {
           final group = groups[index];
           return DeliveryGroupCard(
             group: group,
-            onTap: () =>
-                context.push(Routes.deliveryGroupDetails(group.deliveryGroupId)),
+            onTap: () => context.push(
+              Routes.deliveryGroupDetails(group.deliveryGroupId),
+            ),
             onAccept: () => _handleAcceptGroup(group),
           );
         },
@@ -127,7 +133,8 @@ class _AvailableGroupsPageState extends State<AvailableGroupsPage> {
     final confirmed = await showDeliveryConfirmDialog(
       context: context,
       title: 'Xác nhận nhận đơn',
-      content: 'Bạn có chắc muốn nhận nhóm giao "${group.groupCode}"?\n\n'
+      content:
+          'Bạn có chắc muốn nhận nhóm giao "${group.groupCode}"?\n\n'
           '• Khu vực: ${group.deliveryArea}\n'
           '• Thời gian: ${group.timeSlotDisplay}\n'
           '• Số đơn: ${group.totalOrders}',
@@ -135,9 +142,9 @@ class _AvailableGroupsPageState extends State<AvailableGroupsPage> {
       confirmColor: AppColors.headerGradientEnd,
     );
     if (confirmed == true && mounted) {
-      context
-          .read<DeliveryBloc>()
-          .add(AcceptDeliveryGroup(groupId: group.deliveryGroupId));
+      context.read<DeliveryBloc>().add(
+        AcceptDeliveryGroup(groupId: group.deliveryGroupId),
+      );
     }
   }
 }
