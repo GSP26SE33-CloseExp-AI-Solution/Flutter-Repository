@@ -142,6 +142,59 @@ class AppGradientButton extends StatelessWidget {
   }
 }
 
+// ============== OUTLINED ACTION BUTTON (full width) ==============
+
+/// Nút viền full-width (icon + label) theo Design System — đủ chiều cao / padding cho chữ dài.
+class AppDeliveryOutlinedButton extends StatelessWidget {
+  const AppDeliveryOutlinedButton({
+    super.key,
+    required this.onPressed,
+    required this.icon,
+    required this.label,
+    required this.foregroundColor,
+    this.borderRadius = 16,
+    this.minHeight = 52,
+  });
+
+  final VoidCallback? onPressed;
+  final IconData icon;
+  final String label;
+  final Color foregroundColor;
+  final double borderRadius;
+  final double minHeight;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 22),
+        label: Text(
+          label,
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        style: OutlinedButton.styleFrom(
+          minimumSize: Size.fromHeight(minHeight),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          foregroundColor: foregroundColor,
+          side: BorderSide(color: foregroundColor),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(borderRadius),
+          ),
+          textStyle: AppTypography.header3.copyWith(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            height: 1.25,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // ============== INFO ROW ==============
 
 /// Info row with icon, label and value
@@ -594,21 +647,27 @@ Future<bool?> showDeliveryConfirmDialog({
       title: Text(title, style: AppTypography.header2),
       content: Text(content, style: AppTypography.header3),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: Text(
-            cancelLabel,
-            style: AppTypography.subHeader.copyWith(
-              color: AppColors.neutralMid,
+        TextButtonTheme(
+          data: TextButtonThemeData(
+            style: TextButton.styleFrom(foregroundColor: AppColors.neutralMid),
+          ),
+          child: TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              cancelLabel,
+              style: AppTypography.subHeader.copyWith(
+                color: AppColors.neutralMid,
+              ),
             ),
           ),
         ),
-        ElevatedButton(
+        AppGradientButton(
           onPressed: () => Navigator.pop(context, true),
-          style: confirmColor != null
-              ? ElevatedButton.styleFrom(backgroundColor: confirmColor)
-              : null,
-          child: Text(confirmLabel),
+          borderRadius: 16,
+          child: Text(
+            confirmLabel,
+            style: AppTypography.subHeader.copyWith(color: Colors.white),
+          ),
         ),
       ],
     ),

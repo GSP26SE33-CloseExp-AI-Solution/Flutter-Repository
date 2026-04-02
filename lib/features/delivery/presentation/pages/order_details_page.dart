@@ -272,7 +272,11 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                           ),
                         ),
                         GestureDetector(
-                          onTap: () => _openMaps(order.deliveryAddress ?? ''),
+                          onTap: () => _openMaps(
+                            order.deliveryAddress ?? '',
+                            lat: order.latitude,
+                            lng: order.longitude,
+                          ),
                           child: Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 16,
@@ -316,8 +320,13 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                         ),
                       ),
                       GestureDetector(
-                        onTap: () =>
-                            _openMaps(order.pickupPointAddress ?? ''),
+                        onTap: () => _openMaps(
+                          order.pickupPointAddress ??
+                              order.pickupPointName ??
+                              '',
+                          lat: order.latitude,
+                          lng: order.longitude,
+                        ),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 16,
@@ -517,48 +526,20 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
             const SizedBox(height: 12),
 
             // Failure report — outlined, error color per spec
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: OutlinedButton.icon(
-                onPressed: () => _openFailureSheet(order),
-                icon: const Icon(Icons.cancel_outlined),
-                label: const Text('Giao hàng thất bại'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.headerGradientEnd,
-                  side: const BorderSide(color: AppColors.headerGradientEnd),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  textStyle: AppTypography.header3.copyWith(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
+            AppDeliveryOutlinedButton(
+              onPressed: () => _openFailureSheet(order),
+              icon: Icons.cancel_outlined,
+              label: 'Giao hàng thất bại',
+              foregroundColor: AppColors.headerGradientEnd,
             ),
             const SizedBox(height: 12),
 
             // Manual confirm — outlined, accent color
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: OutlinedButton.icon(
-                onPressed: () => _showConfirmDialog(order),
-                icon: const Icon(Icons.check_circle_outline),
-                label: const Text('Xác nhận đã giao (không QR)'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.accent,
-                  side: const BorderSide(color: AppColors.accent),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  textStyle: AppTypography.header3.copyWith(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
+            AppDeliveryOutlinedButton(
+              onPressed: () => _showConfirmDialog(order),
+              icon: Icons.check_circle_outline,
+              label: 'Xác nhận đã giao (không QR)',
+              foregroundColor: AppColors.accent,
             ),
           ],
         ],
@@ -632,12 +613,37 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     if (await canLaunchUrl(uri)) await launchUrl(uri);
   }
 
-  Future<void> _openMaps(String address) async {
-    final uri = Uri.parse(
-      'https://maps.google.com/?q=${Uri.encodeComponent(address)}',
-    );
-    if (await canLaunchUrl(uri)) {
+  /// Mở Google Maps (search API) — tránh `canLaunchUrl` trên Android 11+ (hay trả false).
+  Future<void> _openMaps(
+    String address, {
+    double? lat,
+    double? lng,
+  }) async {
+    final trimmed = address.trim();
+    late final Uri uri;
+    if (lat != null && lng != null) {
+      uri = Uri.parse(
+        'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
+      );
+    } else if (trimmed.isNotEmpty) {
+      uri = Uri.parse(
+        'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(trimmed)}',
+      );
+    } else {
+      return;
+    }
+    try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Không mở được bản đồ. Hãy cài Google Maps hoặc trình duyệt.',
+          ),
+          backgroundColor: AppColors.error,
+        ),
+      );
     }
   }
 
@@ -738,6 +744,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                   context.read<DeliveryBloc>().add(
                     ConfirmDelivery(
                       orderId: order.orderId,
+                      deliveryGroupId: order.deliveryGroupId,
                       proofImagePath: localSelectedPath,
                     ),
                   );
@@ -757,11 +764,36 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     );
   }
 
+  /// Chuỗi gửi BE là [order.orderCode] khi mã đơn nằm trong payload quét được.
+  String? _verificationCodeFromScan(String scanned, DeliveryOrder order) {
+    final s = scanned.trim();
+    final code = order.orderCode.trim();
+    if (s.isEmpty || code.isEmpty) return null;
+    if (s.toLowerCase() == code.toLowerCase()) return code;
+    if (s.toLowerCase().contains(code.toLowerCase())) return code;
+    return null;
+  }
+
   Future<void> _openQrScan(DeliveryOrder order) async {
     final qrCode = await showQrScanModal(context);
     if (!mounted || qrCode == null || qrCode.trim().isEmpty) return;
+    final verification = _verificationCodeFromScan(qrCode, order);
+    if (verification == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Mã QR không khớp mã đơn hàng. Vui lòng quét lại.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
     context.read<DeliveryBloc>().add(
-      ConfirmDelivery(orderId: order.orderId, notes: 'QR:$qrCode'),
+      ConfirmDelivery(
+        orderId: order.orderId,
+        deliveryGroupId: order.deliveryGroupId,
+        verificationCode: verification,
+        notes: 'Xác nhận bằng QR',
+      ),
     );
   }
 
@@ -778,6 +810,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     context.read<DeliveryBloc>().add(
       ReportDeliveryFailure(
         orderId: order.orderId,
+        deliveryGroupId: order.deliveryGroupId,
         failureReason: result.reason,
         notes: result.notes,
       ),

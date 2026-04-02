@@ -42,7 +42,7 @@ class _DeliveryGroupDetailsPageState extends State<DeliveryGroupDetailsPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            color: AppColors.neutralLight,
+            color: AppColors.headerGradientEnd,
             onPressed: _loadGroupDetails,
             tooltip: 'Làm mới',
           ),
@@ -64,6 +64,10 @@ class _DeliveryGroupDetailsPageState extends State<DeliveryGroupDetailsPage> {
         ),
       );
       _loadGroupDetails();
+      final gid = state.group.deliveryGroupId.trim();
+      if (gid.isNotEmpty && context.mounted) {
+        context.push('${Routes.deliveryMap}?groupId=${Uri.encodeComponent(gid)}');
+      }
     } else if (state is DeliveryGroupCompleted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

@@ -5,6 +5,10 @@ import 'package:equatable/equatable.dart';
 /// Represents an individual order within a delivery group.
 class DeliveryOrder extends Equatable {
   final String orderId;
+
+  /// Nhóm giao (BE `deliveryGroupId`) — dùng để gọi start-delivery trước khi xác nhận đơn.
+  final String? deliveryGroupId;
+
   final String orderCode;
   final DeliveryOrderStatus status;
   final String deliveryType;
@@ -35,6 +39,7 @@ class DeliveryOrder extends Equatable {
 
   const DeliveryOrder({
     required this.orderId,
+    this.deliveryGroupId,
     required this.orderCode,
     required this.status,
     required this.deliveryType,
@@ -105,6 +110,7 @@ class DeliveryOrder extends Equatable {
   @override
   List<Object?> get props => [
     orderId,
+    deliveryGroupId,
     orderCode,
     status,
     deliveryType,

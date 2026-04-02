@@ -143,15 +143,7 @@ Future<DeliveryFailureResult?> showDeliveryFailureSheet(
                 controller: notesController,
                 decoration: InputDecoration(
                   labelText: 'Ghi chú (tùy chọn)',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(color: AppColors.neutralLight),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(color: AppColors.neutralLight),
-                  ),
-                ),
+                ).applyDefaults(Theme.of(context).inputDecorationTheme),
                 minLines: 2,
                 maxLines: 4,
               ),

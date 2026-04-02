@@ -33,6 +33,7 @@ abstract class DeliveryRemoteDataSource {
     String orderId, {
     String? proofImageUrl,
     String? notes,
+    String? verificationCode,
   });
   Future<DeliveryOrderModel> reportDeliveryFailure(
     String orderId, {
@@ -198,11 +199,18 @@ class DeliveryRemoteDataSourceImpl implements DeliveryRemoteDataSource {
     String orderId, {
     String? proofImageUrl,
     String? notes,
+    String? verificationCode,
   }) async {
     try {
+      final data = <String, dynamic>{
+        if (proofImageUrl != null) 'proofImageUrl': proofImageUrl,
+        if (notes != null) 'notes': notes,
+        if (verificationCode != null && verificationCode.trim().isNotEmpty)
+          'verificationCode': verificationCode.trim(),
+      };
       final response = await _dio.post(
         ApiConstants.confirmDelivery(orderId),
-        data: {'proofImageUrl': proofImageUrl, 'notes': notes},
+        data: data,
       );
       // Backend returns DeliveryOrderResponseDto after confirm action.
       return _handleSingleResponse(response, DeliveryOrderModel.fromJson);

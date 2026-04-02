@@ -6,9 +6,12 @@ import '../../../../core/theme/app_typography.dart';
 
 /// Screen 2: Map View.
 ///
-/// Uses Mapbox when access token is provided via --dart-define.
+/// Uses Mapbox when access token is provided via --dart-define / mapbox.json.
 class DeliveryRouteMapPage extends StatelessWidget {
-  const DeliveryRouteMapPage({super.key});
+  const DeliveryRouteMapPage({super.key, this.groupId});
+
+  /// Nhóm giao (query `groupId`) sau khi bắt đầu giao — hiển thị ngữ cảnh lộ trình.
+  final String? groupId;
 
   @override
   Widget build(BuildContext context) {
@@ -45,10 +48,7 @@ class DeliveryRouteMapPage extends StatelessWidget {
                     shape: const CircleBorder(),
                     elevation: 3,
                     child: IconButton(
-                      icon: const Icon(
-                        Icons.arrow_back,
-                        size: 24,
-                      ),
+                      icon: const Icon(Icons.arrow_back, size: 24),
                       color: AppColors.neutralDark,
                       onPressed: () => Navigator.pop(context),
                     ),
@@ -89,6 +89,16 @@ class DeliveryRouteMapPage extends StatelessWidget {
                       color: const Color(0xFF0A0A0A),
                     ),
                   ),
+                  if (groupId != null && groupId!.trim().isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Nhóm giao: ${groupId!.trim()}',
+                      style: AppTypography.bodyRegular1.copyWith(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 10),
                   Row(
                     children: [

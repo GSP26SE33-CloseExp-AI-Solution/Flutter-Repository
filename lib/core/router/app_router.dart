@@ -177,7 +177,10 @@ class AppRouter {
         GoRoute(
           path: Routes.deliveryMap,
           name: 'delivery-map',
-          builder: (context, state) => const DeliveryRouteMapPage(),
+          builder: (context, state) {
+            final groupId = state.uri.queryParameters['groupId'];
+            return DeliveryRouteMapPage(groupId: groupId);
+          },
         ),
       ],
     );

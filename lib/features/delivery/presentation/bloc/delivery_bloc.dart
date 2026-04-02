@@ -263,10 +263,21 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
   ) async {
     emit(const DeliveryLoading(message: 'Đang xác nhận giao hàng...'));
 
+    final groupId = event.deliveryGroupId?.trim();
+    if (groupId != null && groupId.isNotEmpty) {
+      final startRes = await _repository.startDelivery(groupId);
+      final startErr = startRes.fold((f) => f.message, (_) => null);
+      if (startErr != null) {
+        emit(DeliveryActionError(message: startErr));
+        return;
+      }
+    }
+
     final result = await _repository.confirmDelivery(
       event.orderId,
       proofImageUrl: event.proofImageUrl,
       notes: event.notes,
+      verificationCode: event.verificationCode,
     );
 
     result.fold(
@@ -280,6 +291,16 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
     Emitter<DeliveryState> emit,
   ) async {
     emit(const DeliveryLoading(message: 'Đang báo cáo thất bại...'));
+
+    final groupId = event.deliveryGroupId?.trim();
+    if (groupId != null && groupId.isNotEmpty) {
+      final startRes = await _repository.startDelivery(groupId);
+      final startErr = startRes.fold((f) => f.message, (_) => null);
+      if (startErr != null) {
+        emit(DeliveryActionError(message: startErr));
+        return;
+      }
+    }
 
     final result = await _repository.reportDeliveryFailure(
       event.orderId,

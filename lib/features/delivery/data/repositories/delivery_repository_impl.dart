@@ -215,6 +215,7 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
     String orderId, {
     String? proofImageUrl,
     String? notes,
+    String? verificationCode,
   }) async {
     if (!await networkInfo.isConnected) {
       return const Left(NetworkFailure());
@@ -225,6 +226,7 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
         orderId,
         proofImageUrl: proofImageUrl,
         notes: notes,
+        verificationCode: verificationCode,
       );
       return Right(order);
     } on UnauthorizedException {

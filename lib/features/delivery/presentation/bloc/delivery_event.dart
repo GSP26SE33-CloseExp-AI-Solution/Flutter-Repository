@@ -133,35 +133,56 @@ class CompleteDeliveryGroup extends DeliveryEvent {
 /// Confirm delivery for an order
 class ConfirmDelivery extends DeliveryEvent {
   final String orderId;
+
+  /// Gọi API start-delivery trước (nhóm chuyển InTransit) khi có giá trị.
+  final String? deliveryGroupId;
+
   final String? proofImagePath;
   final String? proofImageUrl;
   final String? notes;
 
+  /// Gửi BE khi xác nhận bằng QR; phải khớp [orderCode]. Null = xác nhận không QR.
+  final String? verificationCode;
+
   const ConfirmDelivery({
     required this.orderId,
+    this.deliveryGroupId,
     this.proofImagePath,
     this.proofImageUrl,
     this.notes,
+    this.verificationCode,
   });
 
   @override
-  List<Object?> get props => [orderId, proofImagePath, proofImageUrl, notes];
+  List<Object?> get props => [
+    orderId,
+    deliveryGroupId,
+    proofImagePath,
+    proofImageUrl,
+    notes,
+    verificationCode,
+  ];
 }
 
 /// Report delivery failure
 class ReportDeliveryFailure extends DeliveryEvent {
   final String orderId;
+
+  /// Gọi start-delivery trước khi báo thất bại (đồng bộ trạng thái nhóm).
+  final String? deliveryGroupId;
+
   final String failureReason;
   final String? notes;
 
   const ReportDeliveryFailure({
     required this.orderId,
+    this.deliveryGroupId,
     required this.failureReason,
     this.notes,
   });
 
   @override
-  List<Object?> get props => [orderId, failureReason, notes];
+  List<Object?> get props => [orderId, deliveryGroupId, failureReason, notes];
 }
 
 // ============== UI EVENTS ==============

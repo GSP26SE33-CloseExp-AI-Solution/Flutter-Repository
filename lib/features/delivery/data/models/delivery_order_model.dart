@@ -6,6 +6,7 @@ import '../../domain/entities/delivery_order.dart';
 class DeliveryOrderModel extends DeliveryOrder {
   const DeliveryOrderModel({
     required super.orderId,
+    super.deliveryGroupId,
     required super.orderCode,
     required super.status,
     required super.deliveryType,
@@ -33,6 +34,7 @@ class DeliveryOrderModel extends DeliveryOrder {
 
     return DeliveryOrderModel(
       orderId: json['orderId'] as String? ?? '',
+      deliveryGroupId: _optionalGuidString(json['deliveryGroupId']),
       orderCode: json['orderCode'] as String? ?? '',
       status: DeliveryOrderStatus.fromString(json['status'] as String? ?? ''),
       deliveryType: json['deliveryType'] as String? ?? '',
@@ -59,6 +61,7 @@ class DeliveryOrderModel extends DeliveryOrder {
   Map<String, dynamic> toJson() {
     return {
       'orderId': orderId,
+      if (deliveryGroupId != null) 'deliveryGroupId': deliveryGroupId,
       'orderCode': orderCode,
       'status': status.toApiString(),
       'deliveryType': deliveryType,
@@ -78,6 +81,13 @@ class DeliveryOrderModel extends DeliveryOrder {
           .map((e) => (e as DeliveryOrderItemModel).toJson())
           .toList(),
     };
+  }
+
+  /// BE trả `deliveryGroupId` dạng Guid (string); null nếu đơn chưa gắn nhóm.
+  static String? _optionalGuidString(dynamic value) {
+    if (value == null) return null;
+    final s = value.toString().trim();
+    return s.isEmpty ? null : s;
   }
 
   static DateTime _parseDateTime(dynamic dateTime) {

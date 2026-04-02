@@ -52,6 +52,7 @@ abstract class DeliveryRepository {
     String orderId, {
     String? proofImageUrl,
     String? notes,
+    String? verificationCode,
   });
 
   /// Report delivery failure

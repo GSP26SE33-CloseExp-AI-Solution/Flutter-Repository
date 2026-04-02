@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/constants/api_constants.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -151,6 +150,10 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
         ),
       );
       _loadGroups(refresh: true);
+      final gid = state.group.deliveryGroupId.trim();
+      if (gid.isNotEmpty && context.mounted) {
+        context.push('${Routes.deliveryMap}?groupId=${Uri.encodeComponent(gid)}');
+      }
     } else if (state is DeliveryGroupCompleted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
