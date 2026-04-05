@@ -43,7 +43,7 @@ dependencies:
   url_launcher: ^6.3.2
   image_picker: ^1.1.2
   flutter_svg: ^2.0.10+1
-  mapbox_maps_flutter: ^2.6.0
+  mapbox_maps_flutter: ^2.21.0
   connectivity_plus: ^7.0.0
   device_preview: ^1.2.0
   mobile_scanner: ^7.2.0

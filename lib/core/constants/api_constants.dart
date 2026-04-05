@@ -20,7 +20,7 @@ class ApiConstants {
     // For Android
     if (Platform.isAndroid) {
       // Real Device IP address by ethernet cable
-      return 'http://192.168.1.11:5014/api';
+      return 'http://10.159.160.29:5014/api';
       // return 'http://10.0.2.2:5014/api'; // Android Emulator
     }
     // For iOS

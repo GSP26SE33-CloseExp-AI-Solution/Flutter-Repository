@@ -87,8 +87,9 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
               message: 'Đang tải chi tiết đơn hàng...',
             );
           }
-          if (state is OrderDetailsLoaded)
+          if (state is OrderDetailsLoaded) {
             return _buildOrderDetails(state.order);
+          }
           if (state is DeliveryError) {
             return DeliveryErrorState(
               message: state.message,
