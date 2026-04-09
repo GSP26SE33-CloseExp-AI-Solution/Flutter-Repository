@@ -4,6 +4,7 @@ import '../../../../core/error/failures.dart';
 import '../../../../core/network/network_info.dart';
 import '../../domain/entities/delivery_group.dart';
 import '../../domain/entities/delivery_order.dart';
+import '../../domain/entities/delivery_route_plan.dart';
 import '../../domain/entities/delivery_stats.dart';
 import '../../domain/repositories/delivery_repository.dart';
 import '../datasources/delivery_remote_datasource.dart';
@@ -175,6 +176,38 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
     try {
       final group = await remoteDataSource.completeDeliveryGroup(groupId);
       return Right(group);
+    } on UnauthorizedException {
+      return const Left(UnauthorizedFailure());
+    } on ForbiddenException {
+      return const Left(ForbiddenFailure());
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message, statusCode: e.statusCode));
+    } on NetworkException {
+      return const Left(NetworkFailure());
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, DeliveryRoutePlan>> computeDeliveryRoutePlan(
+    String groupId, {
+    double? startLatitude,
+    double? startLongitude,
+    String metric = 'distance',
+  }) async {
+    if (!await networkInfo.isConnected) {
+      return const Left(NetworkFailure());
+    }
+
+    try {
+      final plan = await remoteDataSource.computeDeliveryRoutePlan(
+        groupId,
+        startLatitude: startLatitude,
+        startLongitude: startLongitude,
+        metric: metric,
+      );
+      return Right(plan);
     } on UnauthorizedException {
       return const Left(UnauthorizedFailure());
     } on ForbiddenException {

@@ -59,20 +59,24 @@ class DeliveryOrder extends Equatable {
     this.longitude,
   });
 
-  /// BE uses string values like `HomeDelivery` / `Pickup` (see Order.DeliveryType), not `home` / `pickup`.
+  /// BE canonical values: `DELIVERY` / `PICKUP` (see Order.DeliveryType); legacy aliases still recognized below.
   static String _normalizeDeliveryType(String raw) =>
       raw.toLowerCase().replaceAll('_', '');
 
   /// Check if this is a home delivery
   bool get isHomeDelivery {
     final t = _normalizeDeliveryType(deliveryType);
-    return t == 'home' || t == 'homedelivery';
+    return t == 'delivery' ||
+        t == 'home' ||
+        t == 'homedelivery';
   }
 
   /// Check if this is a pickup order
   bool get isPickup {
     final t = _normalizeDeliveryType(deliveryType);
-    return t == 'pickup' || t == 'storepickup';
+    return t == 'pickup' ||
+        t == 'storepickup' ||
+        t == 'collectionpoint';
   }
 
   /// Get the delivery destination address shown on cards (home: addressLine; pickup: point address or name)

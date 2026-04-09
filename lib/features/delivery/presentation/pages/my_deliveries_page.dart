@@ -260,7 +260,7 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
       confirmColor: AppColors.successGradientEnd,
     );
     if (confirmed == true && mounted) {
-      // FIX: hiển thị bị lỗi
+      // FIXME: Display error
       context.read<DeliveryBloc>().add(
         StartDelivery(groupId: group.deliveryGroupId),
       );

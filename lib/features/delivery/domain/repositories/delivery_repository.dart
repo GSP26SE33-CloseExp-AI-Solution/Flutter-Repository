@@ -2,6 +2,7 @@ import 'package:dartz/dartz.dart';
 import '../../../../core/error/failures.dart';
 import '../entities/delivery_group.dart';
 import '../entities/delivery_order.dart';
+import '../entities/delivery_route_plan.dart';
 import '../entities/delivery_stats.dart';
 
 /// Delivery Repository Interface - Domain Layer
@@ -41,6 +42,14 @@ abstract class DeliveryRepository {
 
   /// Complete a delivery group
   Future<Either<Failure, DeliveryGroup>> completeDeliveryGroup(String groupId);
+
+  /// Tối ưu thứ tự điểm + polyline (BE gọi Mapbox).
+  Future<Either<Failure, DeliveryRoutePlan>> computeDeliveryRoutePlan(
+    String groupId, {
+    double? startLatitude,
+    double? startLongitude,
+    String metric = 'distance',
+  });
 
   // ============== DELIVERY ORDERS ==============
 

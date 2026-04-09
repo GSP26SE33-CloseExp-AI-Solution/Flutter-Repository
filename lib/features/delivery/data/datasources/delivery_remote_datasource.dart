@@ -5,6 +5,7 @@ import '../../../../core/constants/api_constants.dart';
 import '../../../../core/error/exceptions.dart';
 import '../models/delivery_group_model.dart';
 import '../models/delivery_order_model.dart';
+import '../models/delivery_route_plan_model.dart';
 import '../models/delivery_stats_model.dart';
 
 /// Delivery Remote Data Source - Data Layer
@@ -28,6 +29,13 @@ abstract class DeliveryRemoteDataSource {
   });
   Future<DeliveryGroupModel> startDelivery(String groupId, {String? notes});
   Future<DeliveryGroupModel> completeDeliveryGroup(String groupId);
+
+  Future<DeliveryRoutePlanModel> computeDeliveryRoutePlan(
+    String groupId, {
+    double? startLatitude,
+    double? startLongitude,
+    String metric = 'distance',
+  });
 
   // Delivery Orders
   Future<DeliveryOrderModel> getOrderDetails(String orderId);
@@ -187,6 +195,34 @@ class DeliveryRemoteDataSourceImpl implements DeliveryRemoteDataSource {
       rethrow;
     } catch (e) {
       throw ServerException(message: 'Không thể hoàn thành nhóm giao: $e');
+    }
+  }
+
+  @override
+  Future<DeliveryRoutePlanModel> computeDeliveryRoutePlan(
+    String groupId, {
+    double? startLatitude,
+    double? startLongitude,
+    String metric = 'distance',
+  }) async {
+    try {
+      final data = <String, dynamic>{
+        'metric': metric,
+        if (startLatitude != null) 'startLatitude': startLatitude,
+        if (startLongitude != null) 'startLongitude': startLongitude,
+      };
+      final response = await _dio.post(
+        ApiConstants.deliveryGroupRoutePlan(groupId),
+        data: data,
+      );
+      return _handleSingleResponse(
+        response,
+        DeliveryRoutePlanModel.fromJson,
+      );
+    } on DioException {
+      rethrow;
+    } catch (e) {
+      throw ServerException(message: 'Không thể tính lộ trình: $e');
     }
   }
 
