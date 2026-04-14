@@ -70,6 +70,8 @@ flutter_launcher_icons:
 flutter:
   uses-material-design: true
   assets:
+    # Dev Mapbox token fallback for [MapboxConfig.initialize] (optional if using --dart-define-from-file)
+    - mapbox.dev.json
     - assets/images/
     - assets/icons/
     - assets/icons/navigations/

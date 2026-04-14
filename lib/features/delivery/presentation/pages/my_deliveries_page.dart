@@ -23,6 +23,7 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final ScrollController _scrollController = ScrollController();
+  String? _pendingMapGroupId;
 
   @override
   void initState() {
@@ -142,19 +143,25 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
 
   void _handleStateChange(BuildContext context, DeliveryState state) {
     if (state is DeliveryStarted) {
+      final startedGroupId = state.group.deliveryGroupId.trim();
+      final shouldOpenMap =
+          _pendingMapGroupId != null && _pendingMapGroupId == startedGroupId;
+      _pendingMapGroupId = null;
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Đã bắt đầu giao hàng'),
           backgroundColor: AppColors.successGradientEnd,
         ),
       );
-      _loadGroups(refresh: true);
-      final gid = state.group.deliveryGroupId.trim();
-      if (gid.isNotEmpty && context.mounted) {
+
+      if (shouldOpenMap && mounted) {
         context.push(
-          '${Routes.deliveryMap}?groupId=${Uri.encodeComponent(gid)}',
+          '${Routes.deliveryMap}?groupId=${Uri.encodeComponent(startedGroupId)}',
         );
       }
+
+      _loadGroups(refresh: true);
     } else if (state is DeliveryGroupCompleted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -171,6 +178,7 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
         ),
       );
     } else if (state is DeliveryActionError) {
+      _pendingMapGroupId = null;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(state.message),
@@ -260,10 +268,11 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
       confirmColor: AppColors.successGradientEnd,
     );
     if (confirmed == true && mounted) {
-      // FIXME: Display error
-      context.read<DeliveryBloc>().add(
-        StartDelivery(groupId: group.deliveryGroupId),
-      );
+      final gid = group.deliveryGroupId.trim();
+      if (gid.isNotEmpty) {
+        _pendingMapGroupId = gid;
+        context.read<DeliveryBloc>().add(StartDelivery(groupId: gid));
+      }
     }
   }
 

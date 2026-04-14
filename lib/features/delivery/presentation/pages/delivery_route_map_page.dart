@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 
@@ -35,6 +36,12 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
   bool _loading = false;
   String? _loadError;
 
+  /// Debug-only: which [_buildMapLayer] branch is active (white area ≠ always MapWidget).
+  bool _debugMapSurfaceCreated = false;
+  bool _debugMapStyleLoaded = false;
+  bool _debugMapFullyLoaded = false;
+  String? _debugLastMapLoadError;
+
   bool get _hasValidGroupId {
     final id = widget.groupId?.trim();
     if (id == null || id.isEmpty) return false;
@@ -43,12 +50,70 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
     ).hasMatch(id);
   }
 
+  /// Override via `--dart-define=MAPBOX_ANDROID_HOSTING=...` if needed.
+  /// Default [VD] matches mapbox_maps_flutter SDK; [TLHC_VD] can white-screen some GPUs.
+  AndroidPlatformViewHostingMode get _androidHostingMode {
+    const raw = String.fromEnvironment(
+      'MAPBOX_ANDROID_HOSTING',
+      defaultValue: 'VD',
+    );
+    switch (raw) {
+      case 'VD':
+        return AndroidPlatformViewHostingMode.VD;
+      case 'HC':
+        return AndroidPlatformViewHostingMode.HC;
+      case 'TLHC_HC':
+        return AndroidPlatformViewHostingMode.TLHC_HC;
+      case 'TLHC_VD':
+        return AndroidPlatformViewHostingMode.TLHC_VD;
+      default:
+        return AndroidPlatformViewHostingMode.VD;
+    }
+  }
+
+  /// Raw compile-time value (compare with `MAPBOX_ANDROID_HOSTING` in mapbox.dev.json).
+  static const String _kMapboxAndroidHostingDefine = String.fromEnvironment(
+    'MAPBOX_ANDROID_HOSTING',
+    defaultValue: '',
+  );
+
   @override
   void initState() {
     super.initState();
+    if (kDebugMode) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final defineHint = _kMapboxAndroidHostingDefine.isEmpty
+            ? '(not set, code defaults to VD)'
+            : _kMapboxAndroidHostingDefine;
+        debugPrint(
+          'DeliveryRouteMapPage: groupId=${widget.groupId ?? "(null)"} '
+          'validUuid=$_hasValidGroupId configured=${MapboxConfig.isConfigured} '
+          'mapWidgetSupported=${MapboxConfig.isMapWidgetSupported} '
+          'MAPBOX_ANDROID_HOSTING="$defineHint" resolved=$_androidHostingMode',
+        );
+      });
+    }
     if (_hasValidGroupId) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _loadData());
     }
+  }
+
+  @override
+  void didUpdateWidget(covariant DeliveryRouteMapPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.groupId != widget.groupId) {
+      _debugMapSurfaceCreated = false;
+      _debugMapStyleLoaded = false;
+      _debugMapFullyLoaded = false;
+      _debugLastMapLoadError = null;
+    }
+  }
+
+  /// Label for the map layer branch (token placeholder / unsupported platform / native MapWidget).
+  String _debugMapBranchLabel() {
+    if (!MapboxConfig.isConfigured) return 'placeholder_token';
+    if (!MapboxConfig.isMapWidgetSupported) return 'placeholder_platform';
+    return 'map_widget';
   }
 
   Future<void> _loadData() async {
@@ -121,7 +186,8 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
     final map = _map;
     if (map == null || !MapboxConfig.isConfigured) return;
 
-    _polylineManager ??= await map.annotations.createPolylineAnnotationManager();
+    _polylineManager ??= await map.annotations
+        .createPolylineAnnotationManager();
     _pointManager ??= await map.annotations.createPointAnnotationManager();
 
     await _polylineManager!.deleteAll();
@@ -140,11 +206,7 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
     }
 
     final linePoints = decoded
-        .map(
-          (p) => Point(
-            coordinates: Position(p.longitude, p.latitude),
-          ),
-        )
+        .map((p) => Point(coordinates: Position(p.longitude, p.latitude)))
         .toList();
     final line = LineString.fromPoints(points: linePoints);
 
@@ -246,18 +308,19 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
     final distanceSubtitle = plan != null && plan.metric == 'distance'
         ? plan.summaryLabel
         : (plan != null
-            ? '${plan.totalDistanceKm.toStringAsFixed(1)} km (ước lượng)'
-            : '— km • — phút');
+              ? '${plan.totalDistanceKm.toStringAsFixed(1)} km (ước lượng)'
+              : '— km • — phút');
     final durationSubtitle = plan != null && plan.metric == 'duration'
         ? plan.summaryLabel
         : (plan != null
-            ? '${plan.totalDurationMinutes.toStringAsFixed(0)} phút (ước lượng)'
-            : '— km • — phút');
+              ? '${plan.totalDurationMinutes.toStringAsFixed(0)} phút (ước lượng)'
+              : '— km • — phút');
 
     return Scaffold(
       body: Stack(
         children: [
           Positioned.fill(child: _buildMapLayer()),
+          if (kDebugMode) _buildDebugMapInspectorOverlay(context),
           Positioned(
             left: 0,
             right: 0,
@@ -304,9 +367,7 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
           if (_loading)
             const Positioned.fill(
               child: IgnorePointer(
-                child: Center(
-                  child: CircularProgressIndicator(),
-                ),
+                child: Center(child: CircularProgressIndicator()),
               ),
             ),
           Positioned(
@@ -441,22 +502,57 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
     );
   }
 
-  Widget _buildMapLayer() {
-    if (MapboxConfig.isConfigured) {
-      return MapWidget(
-        key: ValueKey('delivery-map-${widget.groupId ?? 'none'}'),
-        onMapCreated: (map) {
-          _map = map;
-          if (_plan != null || _group != null) {
-            _applyMapAnnotations();
-          }
-        },
-        onStyleLoadedListener: (_) {
-          _applyMapAnnotations();
-        },
-      );
-    }
+  /// On-screen checklist for the "white map" investigation (debug builds only).
+  Widget _buildDebugMapInspectorOverlay(BuildContext context) {
+    final top = MediaQuery.of(context).padding.top + 52;
+    final branch = _debugMapBranchLabel();
+    final defineRaw = _kMapboxAndroidHostingDefine.isEmpty
+        ? '(unset→VD)'
+        : _kMapboxAndroidHostingDefine;
+    final lines = <String>[
+      'branch=$branch',
+      if (branch == 'map_widget') ...[
+        'define=$defineRaw',
+        'hosting=$_androidHostingMode',
+        'created=$_debugMapSurfaceCreated style=$_debugMapStyleLoaded mapLoaded=$_debugMapFullyLoaded',
+        if (_debugLastMapLoadError != null) 'mapLoadErr=$_debugLastMapLoadError',
+      ],
+      'compare: mapbox.dev.json MAPBOX_ANDROID_HOSTING',
+      'Logcat: filter ThemeUtils AppCompat (expect none)',
+      'still blank+mapLoaded? try launch HC then TLHC_HC',
+      'or other device / emulator GLES (MediaTek quirks)',
+    ];
+    return Positioned(
+      top: top,
+      right: 8,
+      child: Material(
+        color: Colors.black.withOpacity(0.55),
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          child: DefaultTextStyle(
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 10,
+              height: 1.25,
+              fontFamily: 'monospace',
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: lines.map((s) => Text(s)).toList(),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
+  /// Shared layout for token / unsupported-platform messages (distinct from blank MapWidget).
+  Widget _buildMapMessagePlaceholder({
+    required String title,
+    required String description,
+  }) {
     return Container(
       color: AppColors.dividerStrong,
       alignment: Alignment.center,
@@ -474,14 +570,14 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Mapbox chưa được cấu hình',
+              title,
               style: AppTypography.subHeader.copyWith(
                 color: AppColors.textPrimary,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Thêm token bằng --dart-define=MAPBOX_ACCESS_TOKEN=pk.xxx rồi chạy lại app.',
+              description,
               style: AppTypography.bodyRegular1.copyWith(
                 color: AppColors.textSecondary,
                 fontSize: 13,
@@ -490,6 +586,68 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildMapLayer() {
+    if (!MapboxConfig.isConfigured) {
+      return _buildMapMessagePlaceholder(
+        title: 'Mapbox chưa được cấu hình',
+        description:
+            'Thêm token bằng --dart-define=MAPBOX_ACCESS_TOKEN=pk.xxx rồi chạy lại app.',
+      );
+    }
+    if (!MapboxConfig.isMapWidgetSupported) {
+      return _buildMapMessagePlaceholder(
+        title: 'Bản đồ không khả dụng trên nền tảng này',
+        description:
+            'mapbox_maps_flutter chỉ hỗ trợ Android và iOS. Chạy app trên thiết bị hoặc emulator Android/iOS để xem bản đồ.',
+      );
+    }
+
+    return MapWidget(
+      key: ValueKey('delivery-map-${widget.groupId ?? 'none'}'),
+      androidHostingMode: _androidHostingMode,
+      onMapLoadErrorListener: (event) {
+        if (kDebugMode) {
+          debugPrint(
+            'Mapbox load error: type=${event.type} message=${event.message} '
+            '(verify MAPBOX_ACCESS_TOKEN, URL restrictions on mapbox.com, device network)',
+          );
+        }
+        if (mounted) {
+          setState(() => _debugLastMapLoadError = '${event.type}: ${event.message}');
+        }
+      },
+      onMapCreated: (map) {
+        _map = map;
+        if (mounted) {
+          setState(() {
+            _debugMapSurfaceCreated = true;
+            _debugLastMapLoadError = null;
+          });
+        }
+        if (_plan != null || _group != null) {
+          _applyMapAnnotations();
+        }
+      },
+      onStyleLoadedListener: (_) {
+        if (mounted) {
+          setState(() => _debugMapStyleLoaded = true);
+        }
+        _applyMapAnnotations();
+      },
+      onMapLoadedListener: (_) {
+        if (kDebugMode) {
+          debugPrint('Mapbox: onMapLoaded (native map reported ready)');
+        }
+        if (mounted) {
+          setState(() {
+            _debugMapFullyLoaded = true;
+            _debugLastMapLoadError = null;
+          });
+        }
+      },
     );
   }
 
@@ -522,8 +680,9 @@ class _RouteOption extends StatelessWidget {
     final borderColor = isActive
         ? AppColors.headerGradientEnd
         : AppColors.dividerStrong;
-    final bgColor =
-        isActive ? AppColors.routeOptionActiveBackground : Colors.white;
+    final bgColor = isActive
+        ? AppColors.routeOptionActiveBackground
+        : Colors.white;
 
     return Material(
       color: bgColor,

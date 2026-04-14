@@ -88,6 +88,8 @@ class DeliveryGroupCard extends StatelessWidget {
                           children: [
                             Text(
                               group.groupCode,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                               style: AppTypography.header2.copyWith(
                                 fontFamily: 'DM Sans',
                                 fontSize: 18,
@@ -96,21 +98,21 @@ class DeliveryGroupCard extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 6),
-                            Row(
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
                               children: [
                                 _Pill(
                                   text: '${group.totalOrders} đơn hàng',
                                   background: AppColors.badgeUrgentBackground,
                                   textColor: AppColors.badgeUrgentText,
                                 ),
-                                if (group.pendingOrders > 0) ...[
-                                  const SizedBox(width: 6),
+                                if (group.pendingOrders > 0)
                                   _Pill(
                                     text: '${group.pendingOrders} chờ giao',
                                     background: AppColors.badgePendingBackground,
                                     textColor: AppColors.badgePendingText,
                                   ),
-                                ],
                               ],
                             ),
                           ],
@@ -226,24 +228,30 @@ class DeliveryGroupCard extends StatelessWidget {
                   bottom: Radius.circular(24),
                 ),
               ),
-              child: Center(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    DeliveryGroupStatusBadge(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: DeliveryGroupStatusBadge(
                       status: group.status,
                       compact: true,
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Nhấn để xem chi tiết đơn hàng',
-                      style: AppTypography.header3.copyWith(
-                        color: AppColors.textSecondary,
-                        fontSize: 12,
-                      ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Nhấn để xem chi tiết đơn hàng',
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    softWrap: true,
+                    style: AppTypography.header3.copyWith(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                      height: 1.35,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ],

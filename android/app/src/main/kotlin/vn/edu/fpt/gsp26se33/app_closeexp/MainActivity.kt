@@ -1,5 +1,7 @@
 package vn.edu.fpt.gsp26se33.app_closeexp
 
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 
-class MainActivity : FlutterActivity()
+/// Mapbox [MapWidget] uses Android Platform Views; [FlutterFragmentActivity] improves
+/// embedding compatibility vs [FlutterActivity] for some devices (blank map surface).
+class MainActivity : FlutterFragmentActivity()

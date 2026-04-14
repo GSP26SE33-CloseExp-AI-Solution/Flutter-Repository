@@ -16,11 +16,13 @@ class ApiConstants {
     // For web
     if (kIsWeb) {
       return 'http://localhost:5014/api';
+      // return 'https://g9z03vx4-5014.asse.devtunnels.ms/api';
     }
     // For Android
     if (Platform.isAndroid) {
       // Real Device IP address by ethernet cable
-      return 'http://10.159.160.29:5014/api';
+      // return 'http://10.159.160.29:5014/api'; // LibraryIP School
+      return 'https://172.31.177.216:5014/api'; // Physical device USB
       // return 'http://10.0.2.2:5014/api'; // Android Emulator
     }
     // For iOS
@@ -60,10 +62,15 @@ class ApiConstants {
   static String completeDeliveryGroup(String id) =>
       '/delivery/groups/$id/complete';
 
+  /// POST body: [DeliveryRoutePlanRequestDto] — tối ưu thứ tự + polyline (Mapbox qua BE).
+  static String deliveryGroupRoutePlan(String id) =>
+      '/delivery/groups/$id/route-plan';
+
   // Delivery Orders
   static String deliveryOrderById(String id) => '/delivery/orders/$id';
   static String confirmDelivery(String id) =>
       '/delivery/orders/$id/confirm-delivery';
+
   /// Multipart field name: `file` — trả về `data.proofImageUrl` (DeliveryProofUploadResponseDto).
   static String deliveryOrderProofImage(String orderId) =>
       '/delivery/orders/$orderId/proof-image';

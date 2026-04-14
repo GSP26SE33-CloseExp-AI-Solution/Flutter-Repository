@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kReleaseMode;
+import 'package:flutter/foundation.dart'
+    show
+        debugPrint,
+        defaultTargetPlatform,
+        kDebugMode,
+        kIsWeb,
+        kReleaseMode,
+        TargetPlatform;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
@@ -10,22 +17,53 @@ import 'core/router/app_router.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'injection_container.dart';
 
+/// DevicePreview wraps the app in ClipRRect / animated layout that breaks Mapbox
+/// AndroidView compositing (white map). Skip on Android and iOS; keep on web;
+/// on desktop use `--dart-define=ENABLE_DEVICE_PREVIEW=true` if needed.
+bool get _isMobileNative =>
+    !kIsWeb &&
+    (defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS);
+
+bool get _shouldWrapWithDevicePreview {
+  if (kReleaseMode) return false;
+  if (_isMobileNative) return false;
+  if (kIsWeb) return true;
+  return const bool.fromEnvironment(
+    'ENABLE_DEVICE_PREVIEW',
+    defaultValue: false,
+  );
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  await MapboxConfig.initialize();
   if (MapboxConfig.isConfigured) {
     MapboxOptions.setAccessToken(MapboxConfig.accessToken);
+  }
+  if (kDebugMode) {
+    // Helps distinguish token placeholder vs MapWidget branch (never log the token).
+    debugPrint(
+      'Mapbox: configured=${MapboxConfig.isConfigured} '
+      'mapWidgetSupported=${MapboxConfig.isMapWidgetSupported}',
+    );
   }
 
   // Initialize dependencies
   await initializeDependencies();
 
-  runApp(
-    DevicePreview(
-      enabled: !kReleaseMode,
-      builder: (context) => const CloseExpDeliveryApp(),
-    ),
-  );
+  const app = CloseExpDeliveryApp();
+  if (_shouldWrapWithDevicePreview) {
+    runApp(
+      DevicePreview(
+        enabled: !kReleaseMode,
+        builder: (context) => app,
+      ),
+    );
+  } else {
+    runApp(app);
+  }
 }
 
 /// Root widget for CloseExp Delivery Staff App
@@ -58,8 +96,17 @@ class _CloseExpDeliveryAppState extends State<CloseExpDeliveryApp> {
     return MultiBlocProvider(
       providers: [BlocProvider<AuthBloc>.value(value: _authBloc)],
       child: MaterialApp.router(
-        locale: DevicePreview.locale(context),
-        builder: DevicePreview.appBuilder,
+        // [DevicePreview.appBuilder] + locale can break Mapbox [MapWidget] surface on
+        // Android/iOS (white/blank frame) even when outer [DevicePreview] is skipped.
+        locale: _shouldWrapWithDevicePreview
+            ? DevicePreview.locale(context)
+            : null,
+        builder: (context, child) {
+          if (_shouldWrapWithDevicePreview) {
+            return DevicePreview.appBuilder(context, child);
+          }
+          return child ?? const SizedBox.shrink();
+        },
         title: 'CloseExp Delivery',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light(),

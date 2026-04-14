@@ -14,8 +14,10 @@ class DeliveryGroup extends Equatable {
   final String timeSlotDisplay;
   final String deliveryType;
   final String deliveryArea;
+
   /// Geographic center of the delivery group area (from BE CenterLatitude)
   final double? centerLatitude;
+
   /// Geographic center of the delivery group area (from BE CenterLongitude)
   final double? centerLongitude;
   final DeliveryGroupStatus status;
@@ -143,7 +145,7 @@ enum DeliveryGroupStatus {
   String get displayName {
     switch (this) {
       case DeliveryGroupStatus.pending:
-        return 'Có sẵn';
+        return 'Chờ nhận';
       case DeliveryGroupStatus.assigned:
         return 'Đã nhận';
       case DeliveryGroupStatus.inTransit:
@@ -152,6 +154,19 @@ enum DeliveryGroupStatus {
         return 'Hoàn thành';
       case DeliveryGroupStatus.failed:
         return 'Thất bại';
+    }
+  }
+
+  /// Delivery dispatch policy hint for shipper UX.
+  String get dispatchPolicyHint {
+    switch (this) {
+      case DeliveryGroupStatus.pending:
+        return 'Nhóm có thể bị điều phối lại cho đến khi bạn nhận';
+      case DeliveryGroupStatus.assigned:
+      case DeliveryGroupStatus.inTransit:
+      case DeliveryGroupStatus.completed:
+      case DeliveryGroupStatus.failed:
+        return 'Nhóm đã khóa điều phối';
     }
   }
 }
@@ -163,8 +178,10 @@ class DeliveryGroupSummary extends Equatable {
   final String timeSlotDisplay;
   final String deliveryType;
   final String deliveryArea;
+
   /// Geographic center of the delivery group area (from BE CenterLatitude)
   final double? centerLatitude;
+
   /// Geographic center of the delivery group area (from BE CenterLongitude)
   final double? centerLongitude;
   final DeliveryGroupStatus status;

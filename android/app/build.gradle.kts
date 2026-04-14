@@ -39,3 +39,9 @@ android {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // Mapbox map ornaments (compass, logo, attribution) are AppCompat views; platform
+    // themes like Theme.Light.NoTitleBar trigger ThemeUtils errors and a blank map surface.
+    implementation("androidx.appcompat:appcompat:1.7.0")
+}

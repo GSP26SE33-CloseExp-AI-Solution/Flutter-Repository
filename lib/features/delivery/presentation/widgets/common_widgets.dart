@@ -122,7 +122,9 @@ class AppGradientButton extends StatelessWidget {
               ? null
               : [
                   BoxShadow(
-                    color: AppColors.primaryButtonShadow.withValues(alpha: 0.10),
+                    color: AppColors.primaryButtonShadow.withValues(
+                      alpha: 0.10,
+                    ),
                     blurRadius: 30,
                     offset: const Offset(0, 10),
                   ),
@@ -632,7 +634,9 @@ class DeliveryNoteCard extends StatelessWidget {
 
 // ============== CONFIRMATION DIALOG ==============
 
-/// Show confirmation dialog with title, content and actions
+/// Show confirmation dialog with title, content and actions.
+///
+/// Avoids [AppGradientButton] in [AlertDialog.actions] (overflow on narrow screens).
 Future<bool?> showDeliveryConfirmDialog({
   required BuildContext context,
   required String title,
@@ -641,32 +645,42 @@ Future<bool?> showDeliveryConfirmDialog({
   String cancelLabel = 'Hủy',
   Color? confirmColor,
 }) {
+  final resolvedConfirmColor = confirmColor ?? AppColors.primaryGradientEnd;
+
   return showDialog<bool>(
     context: context,
-    builder: (context) => AlertDialog(
+    builder: (dialogContext) => AlertDialog(
       title: Text(title, style: AppTypography.header2),
-      content: Text(content, style: AppTypography.header3),
+      content: SingleChildScrollView(
+        child: Text(content, style: AppTypography.header3),
+      ),
+      actionsOverflowButtonSpacing: 8,
       actions: [
-        TextButtonTheme(
-          data: TextButtonThemeData(
-            style: TextButton.styleFrom(foregroundColor: AppColors.neutralMid),
-          ),
-          child: TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(
-              cancelLabel,
-              style: AppTypography.subHeader.copyWith(
-                color: AppColors.neutralMid,
-              ),
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext, false),
+          child: Text(
+            cancelLabel,
+            style: AppTypography.subHeader.copyWith(
+              color: AppColors.neutralMid,
             ),
           ),
         ),
-        AppGradientButton(
-          onPressed: () => Navigator.pop(context, true),
-          borderRadius: 16,
+        FilledButton(
+          onPressed: () => Navigator.pop(dialogContext, true),
+          style: FilledButton.styleFrom(
+            backgroundColor: resolvedConfirmColor,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
           child: Text(
             confirmLabel,
-            style: AppTypography.subHeader.copyWith(color: Colors.white),
+            style: AppTypography.subHeader.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
       ],
