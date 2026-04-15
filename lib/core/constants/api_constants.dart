@@ -22,7 +22,7 @@ class ApiConstants {
     if (Platform.isAndroid) {
       // Real Device IP address by ethernet cable
       // return 'http://10.159.160.29:5014/api'; // LibraryIP School
-      return 'http://172.31.177.216:5014/api'; // Physical device USB
+      return 'http://172.31.177.1:5014/api'; // Physical device USB
       // return 'http://10.0.2.2:5014/api'; // Android Emulator
     }
     // For iOS

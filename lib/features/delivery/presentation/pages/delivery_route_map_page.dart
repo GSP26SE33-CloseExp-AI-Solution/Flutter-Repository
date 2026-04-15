@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 
 import '../../../../core/constants/mapbox_config.dart';
+import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/utils/polyline6_decoder.dart';
@@ -26,6 +30,15 @@ class DeliveryRouteMapPage extends StatefulWidget {
 class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
   final DeliveryRepository _repository = sl<DeliveryRepository>();
 
+  static const bool _useMockRoute = bool.fromEnvironment(
+    'USE_MOCK_ROUTE',
+    defaultValue: false,
+  );
+  static const int _mockRoutePoints = int.fromEnvironment(
+    'MOCK_ROUTE_POINTS',
+    defaultValue: 3,
+  );
+
   MapboxMap? _map;
   PolylineAnnotationManager? _polylineManager;
   PointAnnotationManager? _pointManager;
@@ -36,11 +49,19 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
   bool _loading = false;
   String? _loadError;
 
+  /// Guard to prevent concurrent annotation application (reduce rebuild churn).
+  bool _annotationApplyInProgress = false;
+
   /// Debug-only: which [_buildMapLayer] branch is active (white area ≠ always MapWidget).
   bool _debugMapSurfaceCreated = false;
   bool _debugMapStyleLoaded = false;
   bool _debugMapFullyLoaded = false;
   String? _debugLastMapLoadError;
+  bool _controlsExpanded = false;
+  int _fullRenderFrameCount = 0;
+  bool _mapRenderStalled = false;
+  bool _didTryFallbackStyle = false;
+  Timer? _mapHealthTimer;
 
   bool get _hasValidGroupId {
     final id = widget.groupId?.trim();
@@ -71,6 +92,15 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
     }
   }
 
+  /// Toggle via `--dart-define=MAPBOX_TEXTURE_VIEW=true|false` for device-specific rendering.
+  /// Some devices render blank with TextureView=true under certain hosting modes.
+  bool get _useTextureView {
+    return const bool.fromEnvironment(
+      'MAPBOX_TEXTURE_VIEW',
+      defaultValue: false,
+    );
+  }
+
   /// Raw compile-time value (compare with `MAPBOX_ANDROID_HOSTING` in mapbox.dev.json).
   static const String _kMapboxAndroidHostingDefine = String.fromEnvironment(
     'MAPBOX_ANDROID_HOSTING',
@@ -89,7 +119,9 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
           'DeliveryRouteMapPage: groupId=${widget.groupId ?? "(null)"} '
           'validUuid=$_hasValidGroupId configured=${MapboxConfig.isConfigured} '
           'mapWidgetSupported=${MapboxConfig.isMapWidgetSupported} '
-          'MAPBOX_ANDROID_HOSTING="$defineHint" resolved=$_androidHostingMode',
+          'MAPBOX_ANDROID_HOSTING="$defineHint" resolved=$_androidHostingMode '
+          'MAPBOX_TEXTURE_VIEW=$_useTextureView '
+          'USE_MOCK_ROUTE=$_useMockRoute MOCK_ROUTE_POINTS=$_mockRoutePoints',
         );
       });
     }
@@ -102,11 +134,52 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
   void didUpdateWidget(covariant DeliveryRouteMapPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.groupId != widget.groupId) {
+      _mapHealthTimer?.cancel();
       _debugMapSurfaceCreated = false;
       _debugMapStyleLoaded = false;
       _debugMapFullyLoaded = false;
       _debugLastMapLoadError = null;
+      _fullRenderFrameCount = 0;
+      _mapRenderStalled = false;
+      _didTryFallbackStyle = false;
     }
+  }
+
+  @override
+  void dispose() {
+    _mapHealthTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startMapHealthCheck() {
+    _mapHealthTimer?.cancel();
+    _mapHealthTimer = Timer(const Duration(seconds: 4), () async {
+      if (!mounted) return;
+
+      // If map loaded but still has no full frame, try a stronger fallback style once.
+      if (_debugMapFullyLoaded &&
+          _fullRenderFrameCount == 0 &&
+          !_didTryFallbackStyle) {
+        _didTryFallbackStyle = true;
+        _mapRenderStalled = true;
+        if (kDebugMode) {
+          debugPrint(
+            'Map health: no FULL frame after onMapLoaded, switching to satellite streets fallback style.',
+          );
+        }
+        await _map?.loadStyleURI(MapboxStyles.SATELLITE_STREETS);
+        return;
+      }
+
+      // If still no full frame after fallback attempt, surface a clear warning on UI.
+      if (_debugMapFullyLoaded && _fullRenderFrameCount == 0 && mounted) {
+        setState(() {
+          _mapRenderStalled = true;
+          _debugLastMapLoadError ??=
+              'Map loaded but no render frame reached FULL state';
+        });
+      }
+    });
   }
 
   /// Label for the map layer branch (token placeholder / unsupported platform / native MapWidget).
@@ -142,6 +215,17 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
   }
 
   Future<void> _fetchRoutePlanOnly() async {
+    if (_useMockRoute) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _plan = _createMockRoutePlan();
+        _loadError = null;
+      });
+      _applyMapAnnotationsIfNecessary();
+      return;
+    }
+
     if (!_hasValidGroupId) return;
     final gid = widget.groupId!.trim();
     setState(() {
@@ -163,7 +247,7 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
           _plan = null;
           _loadError = failure.message;
         });
-        _applyMapAnnotations();
+        _applyMapAnnotationsIfNecessary();
       },
       (plan) {
         setState(() {
@@ -171,15 +255,37 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
           _plan = plan;
           _loadError = null;
         });
-        _applyMapAnnotations();
+        _applyMapAnnotationsIfNecessary();
       },
     );
   }
 
   Future<void> _onMetricSelected(String metric) async {
-    if (_metric == metric) return;
+    if (_metric == metric || _loading) return;
     setState(() => _metric = metric);
     if (_hasValidGroupId) await _fetchRoutePlanOnly();
+  }
+
+  void _handleBackNavigation(BuildContext context) {
+    final router = GoRouter.of(context);
+    if (router.canPop()) {
+      context.pop();
+      return;
+    }
+
+    // Fallback target when this page was opened via replacement and stack has no previous route.
+    context.go(Routes.deliveryAvailable);
+  }
+
+  /// Apply annotations with guard to prevent concurrent calls during map lifecycle churn.
+  Future<void> _applyMapAnnotationsIfNecessary() async {
+    if (_annotationApplyInProgress) return;
+    _annotationApplyInProgress = true;
+    try {
+      await _applyMapAnnotations();
+    } finally {
+      _annotationApplyInProgress = false;
+    }
   }
 
   Future<void> _applyMapAnnotations() async {
@@ -219,32 +325,49 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
       ),
     );
 
-    final group = _group;
-    if (group != null && plan.orderedOrderIds.isNotEmpty) {
+    if (_useMockRoute) {
       var seq = 1;
-      for (final oid in plan.orderedOrderIds) {
-        DeliveryOrder? match;
-        for (final o in group.orders) {
-          if (o.orderId == oid) {
-            match = o;
-            break;
-          }
-        }
-        if (match?.latitude != null && match?.longitude != null) {
-          await _pointManager!.create(
-            PointAnnotationOptions(
-              geometry: Point(
-                coordinates: Position(match!.longitude!, match.latitude!),
-              ),
-              textField: '$seq',
-              textSize: 14,
-              textColor: const Color(0xFFFFFFFF).toARGB32(),
-              textHaloColor: const Color(0xFF000000).toARGB32(),
-              textHaloWidth: 1,
-            ),
-          );
-        }
+      for (final p in decoded) {
+        await _pointManager!.create(
+          PointAnnotationOptions(
+            geometry: Point(coordinates: Position(p.longitude, p.latitude)),
+            textField: '$seq',
+            textSize: 14,
+            textColor: const Color(0xFFFFFFFF).toARGB32(),
+            textHaloColor: const Color(0xFF000000).toARGB32(),
+            textHaloWidth: 1,
+          ),
+        );
         seq++;
+      }
+    } else {
+      final group = _group;
+      if (group != null && plan.orderedOrderIds.isNotEmpty) {
+        var seq = 1;
+        for (final oid in plan.orderedOrderIds) {
+          DeliveryOrder? match;
+          for (final o in group.orders) {
+            if (o.orderId == oid) {
+              match = o;
+              break;
+            }
+          }
+          if (match?.latitude != null && match?.longitude != null) {
+            await _pointManager!.create(
+              PointAnnotationOptions(
+                geometry: Point(
+                  coordinates: Position(match!.longitude!, match.latitude!),
+                ),
+                textField: '$seq',
+                textSize: 14,
+                textColor: const Color(0xFFFFFFFF).toARGB32(),
+                textHaloColor: const Color(0xFF000000).toARGB32(),
+                textHaloWidth: 1,
+              ),
+            );
+          }
+          seq++;
+        }
       }
     }
 
@@ -252,6 +375,11 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
   }
 
   Future<void> _fitToOrdersIfPossible() async {
+    if (_useMockRoute) {
+      await _fitCameraToPoints(_mockPointsForRoute());
+      return;
+    }
+
     final group = _group;
     final map = _map;
     if (map == null || group == null) return;
@@ -261,6 +389,65 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
         .toList();
     if (pts.isEmpty) return;
     await _fitCameraToPoints(pts);
+  }
+
+  DeliveryRoutePlan _createMockRoutePlan() {
+    final points = _mockPointsForRoute();
+    final orderedIds = <String>[];
+    for (var i = 0; i < points.length; i++) {
+      orderedIds.add('mock-order-${i + 1}');
+    }
+
+    return DeliveryRoutePlan(
+      orderedOrderIds: orderedIds,
+      totalDistanceKm: points.length == 2 ? 3.6 : 6.2,
+      totalDurationMinutes: points.length == 2 ? 12 : 22,
+      encodedPolyline: _encodePolyline6(points),
+      polylineEncoding: 'polyline6',
+      metric: _metric,
+      skippedOrderIds: const [],
+    );
+  }
+
+  List<({double latitude, double longitude})> _mockPointsForRoute() {
+    if (_mockRoutePoints <= 2) {
+      return const [
+        (latitude: 10.776889, longitude: 106.700806),
+        (latitude: 10.769425, longitude: 106.690102),
+      ];
+    }
+
+    return const [
+      (latitude: 10.776889, longitude: 106.700806),
+      (latitude: 10.769425, longitude: 106.690102),
+      (latitude: 10.762128, longitude: 106.682640),
+    ];
+  }
+
+  String _encodePolyline6(List<({double latitude, double longitude})> points) {
+    final sb = StringBuffer();
+    var lastLat = 0;
+    var lastLng = 0;
+
+    for (final p in points) {
+      final lat = (p.latitude * 1e6).round();
+      final lng = (p.longitude * 1e6).round();
+      _encodeSigned(lat - lastLat, sb);
+      _encodeSigned(lng - lastLng, sb);
+      lastLat = lat;
+      lastLng = lng;
+    }
+
+    return sb.toString();
+  }
+
+  void _encodeSigned(int value, StringBuffer sb) {
+    var v = value < 0 ? ~(value << 1) : (value << 1);
+    while (v >= 0x20) {
+      sb.writeCharCode((0x20 | (v & 0x1f)) + 63);
+      v >>= 5;
+    }
+    sb.writeCharCode(v + 63);
   }
 
   Future<void> _fitCameraToPoints(
@@ -317,187 +504,234 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
               : '— km • — phút');
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColors.headerGradientStart,
+                AppColors.headerGradientEnd,
+              ],
+            ),
+          ),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => _handleBackNavigation(context),
+        ),
+        title: Text(
+          'Lộ trình giao hàng',
+          style: AppTypography.header1.copyWith(
+            fontSize: 20,
+            color: Colors.white,
+            letterSpacing: -0.60,
+          ),
+        ),
+      ),
       body: Stack(
         children: [
           Positioned.fill(child: _buildMapLayer()),
-          if (kDebugMode) _buildDebugMapInspectorOverlay(context),
-          Positioned(
-            left: 0,
-            right: 0,
-            top: 0,
-            height: 180,
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.black54, Colors.transparent],
+          if (kDebugMode && _mapRenderStalled)
+            Positioned(
+              left: 16,
+              right: 16,
+              top: 16,
+              child: Material(
+                color: Colors.amber.shade100,
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  child: Text(
+                    'Ban do dang gap su co hien thi tren thiet bi nay. Thu chuyen che do hosting/texture trong launch config.',
+                    style: AppTypography.bodyRegular1.copyWith(
+                      color: AppColors.neutralDark,
+                      fontSize: 12,
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                children: [
-                  Material(
-                    color: Colors.white,
-                    shape: const CircleBorder(),
-                    elevation: 3,
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back, size: 24),
-                      color: AppColors.neutralDark,
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Lộ trình giao hàng',
-                    style: AppTypography.header2.copyWith(
-                      fontSize: 20,
-                      letterSpacing: -0.60,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          if (kDebugMode) _buildDebugMapInspectorOverlay(context),
           if (_loading)
             const Positioned.fill(
               child: IgnorePointer(
                 child: Center(child: CircularProgressIndicator()),
               ),
             ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                border: Border(top: BorderSide(color: AppColors.cardBorder)),
-              ),
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        ],
+      ),
+      bottomSheet: SafeArea(
+        top: false,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOut,
+          height: _controlsExpanded ? 330 : 126,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            border: Border(top: BorderSide(color: AppColors.cardBorder)),
+          ),
+          child: ClipRect(
+            child: SingleChildScrollView(
+              physics: _controlsExpanded
+                  ? const BouncingScrollPhysics()
+                  : const NeverScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Chọn lộ trình',
-                    style: AppTypography.header3.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  if (widget.groupId != null &&
-                      widget.groupId!.trim().isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      'Nhóm: ${widget.groupId!.trim()}',
-                      style: AppTypography.bodyRegular1.copyWith(
-                        fontSize: 12,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                  if (_loadError != null) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      _loadError!,
-                      style: AppTypography.bodyRegular1.copyWith(
-                        fontSize: 12,
-                        color: Colors.red.shade700,
-                      ),
-                    ),
-                  ],
-                  if (_plan != null && _plan!.skippedOrderIds.isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      'Bỏ qua ${_plan!.skippedOrderIds.length} đơn thiếu tọa độ',
-                      style: AppTypography.bodyRegular1.copyWith(
-                        fontSize: 11,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 10),
                   Row(
                     children: [
                       Expanded(
-                        child: _RouteOption(
-                          title: 'Tối ưu',
-                          subtitle: _metric == 'distance'
-                              ? distanceSubtitle
-                              : 'Chạm để tối thiểu km',
-                          isActive: _metric == 'distance',
-                          onTap: MapboxConfig.isConfigured && _hasValidGroupId
-                              ? () => _onMetricSelected('distance')
-                              : null,
+                        child: Text(
+                          'Chọn lộ trình',
+                          style: AppTypography.header3.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _RouteOption(
-                          title: 'Nhanh nhất',
-                          subtitle: _metric == 'duration'
-                              ? durationSubtitle
-                              : 'Chạm để tối thiểu phút',
-                          isActive: _metric == 'duration',
-                          onTap: MapboxConfig.isConfigured && _hasValidGroupId
-                              ? () => _onMetricSelected('duration')
-                              : null,
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () {
+                          setState(
+                            () => _controlsExpanded = !_controlsExpanded,
+                          );
+                        },
+                        icon: Icon(
+                          _controlsExpanded
+                              ? Icons.keyboard_arrow_down
+                              : Icons.keyboard_arrow_up,
+                          color: AppColors.textSecondary,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [
-                            AppColors.headerGradientStart,
-                            AppColors.headerGradientEnd,
-                          ],
+                  Text(
+                    _metric == 'distance' ? distanceSubtitle : durationSubtitle,
+                    style: AppTypography.bodyRegular1.copyWith(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  if (_controlsExpanded) ...[
+                    if (widget.groupId != null &&
+                        widget.groupId!.trim().isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Nhóm: ${widget.groupId!.trim()}',
+                        style: AppTypography.bodyRegular1.copyWith(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
                         ),
-                        borderRadius: BorderRadius.circular(16),
                       ),
-                      child: TextButton.icon(
-                        onPressed: () {
-                          if (!MapboxConfig.isConfigured) {
-                            _showMissingTokenHint(context);
-                            return;
-                          }
-                          if (_plan?.orderedOrderIds.isNotEmpty == true) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Giao theo thứ tự đánh số trên bản đồ (mục Đơn hàng để xác nhận từng đơn).',
+                    ],
+                    if (_loadError != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        _loadError!,
+                        style: AppTypography.bodyRegular1.copyWith(
+                          fontSize: 12,
+                          color: Colors.red.shade700,
+                        ),
+                      ),
+                    ],
+                    if (_plan != null && _plan!.skippedOrderIds.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        'Bỏ qua ${_plan!.skippedOrderIds.length} đơn thiếu tọa độ',
+                        style: AppTypography.bodyRegular1.copyWith(
+                          fontSize: 11,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _RouteOption(
+                            title: 'Tối ưu',
+                            subtitle: _metric == 'distance'
+                                ? distanceSubtitle
+                                : 'Chạm để tối thiểu km',
+                            isActive: _metric == 'distance',
+                            onTap: MapboxConfig.isConfigured && _hasValidGroupId
+                                ? () => _onMetricSelected('distance')
+                                : null,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _RouteOption(
+                            title: 'Nhanh nhất',
+                            subtitle: _metric == 'duration'
+                                ? durationSubtitle
+                                : 'Chạm để tối thiểu phút',
+                            isActive: _metric == 'duration',
+                            onTap: MapboxConfig.isConfigured && _hasValidGroupId
+                                ? () => _onMetricSelected('duration')
+                                : null,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [
+                              AppColors.headerGradientStart,
+                              AppColors.headerGradientEnd,
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: TextButton.icon(
+                          onPressed: () {
+                            if (!MapboxConfig.isConfigured) {
+                              _showMissingTokenHint(context);
+                              return;
+                            }
+                            if (_plan?.orderedOrderIds.isNotEmpty == true) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Giao theo thứ tự đánh số trên bản đồ (mục Đơn hàng để xác nhận từng đơn).',
+                                  ),
                                 ),
-                              ),
-                            );
-                          }
-                        },
-                        icon: const Icon(Icons.play_arrow, color: Colors.white),
-                        label: Text(
-                          'Bắt đầu giao hàng',
-                          style: AppTypography.subHeader.copyWith(
+                              );
+                            }
+                          },
+                          icon: const Icon(
+                            Icons.play_arrow,
                             color: Colors.white,
-                            fontSize: 16,
+                          ),
+                          label: Text(
+                            'Bắt đầu giao hàng',
+                            style: AppTypography.subHeader.copyWith(
+                              color: Colors.white,
+                              fontSize: 16,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -507,13 +741,14 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
     final top = MediaQuery.of(context).padding.top + 52;
     final branch = _debugMapBranchLabel();
     final defineRaw = _kMapboxAndroidHostingDefine.isEmpty
-        ? '(unset→VD)'
+        ? '(unset->VD)'
         : _kMapboxAndroidHostingDefine;
     final lines = <String>[
       'branch=$branch',
       if (branch == 'map_widget') ...[
         'define=$defineRaw',
         'hosting=$_androidHostingMode',
+        'texture=$_useTextureView fullFrames=$_fullRenderFrameCount stalled=$_mapRenderStalled',
         'created=$_debugMapSurfaceCreated style=$_debugMapStyleLoaded mapLoaded=$_debugMapFullyLoaded',
         if (_debugLastMapLoadError != null)
           'mapLoadErr=$_debugLastMapLoadError',
@@ -608,6 +843,8 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
 
     return MapWidget(
       key: ValueKey('delivery-map-${widget.groupId ?? 'none'}'),
+      textureView: _useTextureView,
+      styleUri: MapboxStyles.MAPBOX_STREETS,
       androidHostingMode: _androidHostingMode,
       onMapLoadErrorListener: (event) {
         if (kDebugMode) {
@@ -630,15 +867,43 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
             _debugLastMapLoadError = null;
           });
         }
-        if (_plan != null || _group != null) {
-          _applyMapAnnotations();
-        }
       },
       onStyleLoadedListener: (_) {
         if (mounted) {
           setState(() => _debugMapStyleLoaded = true);
         }
-        _applyMapAnnotations();
+      },
+      onRenderFrameFinishedListener: (eventData) {
+        if (eventData.renderMode == RenderMode.FULL) {
+          if (_fullRenderFrameCount == 0 && mounted) {
+            setState(() {
+              _mapRenderStalled = false;
+              _debugLastMapLoadError = null;
+            });
+          }
+          _fullRenderFrameCount++;
+        }
+      },
+      onResourceRequestListener: (resourceEventData) {
+        if (!kDebugMode) return;
+        final response = resourceEventData.response;
+        final error = response?.error;
+        final isStyleOrTile =
+            resourceEventData.request.kind == RequestType.STYLE ||
+            resourceEventData.request.kind == RequestType.TILE;
+        final isOfflineMiss =
+            error?.reason == ResponseErrorReason.NOT_FOUND &&
+            (error?.message.toLowerCase().contains('offline database') ??
+                false);
+
+        if (error != null && isStyleOrTile && !isOfflineMiss) {
+          debugPrint(
+            'Map resource error: kind=${resourceEventData.request.kind} '
+            'source=${resourceEventData.dataSource} '
+            'url=${resourceEventData.request.url} '
+            'reason=${error.reason} message=${error.message}',
+          );
+        }
       },
       onMapLoadedListener: (_) {
         if (kDebugMode) {
@@ -650,6 +915,9 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
             _debugLastMapLoadError = null;
           });
         }
+        _startMapHealthCheck();
+        // Apply annotations only after map is fully loaded to avoid blocking render thread.
+        _applyMapAnnotationsIfNecessary();
       },
     );
   }

@@ -72,12 +72,14 @@ class _DeliveryGroupDetailsPageState extends State<DeliveryGroupDetailsPage> {
       );
 
       if (shouldOpenMap && mounted) {
-        context.push(
+        context.pushReplacement(
           '${Routes.deliveryMap}?groupId=${Uri.encodeComponent(startedGroupId)}',
         );
       }
 
-      _loadGroupDetails();
+      if (!shouldOpenMap) {
+        _loadGroupDetails();
+      }
     } else if (state is DeliveryGroupCompleted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

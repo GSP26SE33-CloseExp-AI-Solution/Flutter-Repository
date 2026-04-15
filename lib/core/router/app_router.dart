@@ -176,11 +176,15 @@ class AppRouter {
 
         // Delivery Route Map (placeholder)
         GoRoute(
+          parentNavigatorKey: _rootNavigatorKey,
           path: Routes.deliveryMap,
           name: 'delivery-map',
-          builder: (context, state) {
+          pageBuilder: (context, state) {
             final groupId = state.uri.queryParameters['groupId'];
-            return DeliveryRouteMapPage(groupId: groupId);
+            return MaterialPage<void>(
+              fullscreenDialog: true,
+              child: DeliveryRouteMapPage(groupId: groupId),
+            );
           },
         ),
       ],
