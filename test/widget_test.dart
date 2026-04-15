@@ -9,7 +9,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   testWidgets('App loads correctly', (WidgetTester tester) async {
-    // TODO: Add proper widget tests with mocked dependencies
     // For now, just verify the test runs
     expect(true, isTrue);
   });

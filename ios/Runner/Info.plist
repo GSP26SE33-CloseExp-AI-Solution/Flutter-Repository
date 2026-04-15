@@ -47,5 +47,7 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Ứng dụng cần camera để quét mã QR xác nhận giao hàng.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Ứng dụng cần vị trí hiện tại để đề xuất điểm bắt đầu lộ trình giao hàng chính xác.</string>
 </dict>
 </plist>
