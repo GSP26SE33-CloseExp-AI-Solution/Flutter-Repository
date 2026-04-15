@@ -123,6 +123,10 @@ class _DeliveryGroupDetailsPageState extends State<DeliveryGroupDetailsPage> {
       return DeliveryErrorState(
         message: state.message,
         onRetry: _loadGroupDetails,
+        secondaryActionLabel: 'Quay về bản đồ',
+        onSecondaryAction: () => context.push(
+          '${Routes.deliveryMap}?groupId=${Uri.encodeComponent(widget.groupId)}',
+        ),
       );
     }
 
@@ -372,8 +376,12 @@ class _GroupDetailsContent extends StatelessWidget {
           ...group.orders.map(
             (order) => DeliveryOrderCard(
               order: order,
-              onTap: () =>
-                  context.push(Routes.deliveryOrderDetails(order.orderId)),
+              onTap: () => context.push(
+                Routes.deliveryOrderDetails(
+                  order.orderId,
+                  groupId: group.deliveryGroupId,
+                ),
+              ),
             ),
           ),
       ],

@@ -473,8 +473,16 @@ class DeliveryEmptyState extends StatelessWidget {
 class DeliveryErrorState extends StatelessWidget {
   final String message;
   final VoidCallback? onRetry;
+  final String? secondaryActionLabel;
+  final VoidCallback? onSecondaryAction;
 
-  const DeliveryErrorState({super.key, required this.message, this.onRetry});
+  const DeliveryErrorState({
+    super.key,
+    required this.message,
+    this.onRetry,
+    this.secondaryActionLabel,
+    this.onSecondaryAction,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -501,6 +509,13 @@ class DeliveryErrorState extends StatelessWidget {
           if (onRetry != null) ...[
             const SizedBox(height: 16),
             ElevatedButton(onPressed: onRetry, child: const Text('Thử lại')),
+          ],
+          if (secondaryActionLabel != null && onSecondaryAction != null) ...[
+            const SizedBox(height: 12),
+            OutlinedButton(
+              onPressed: onSecondaryAction,
+              child: Text(secondaryActionLabel!),
+            ),
           ],
         ],
       ),

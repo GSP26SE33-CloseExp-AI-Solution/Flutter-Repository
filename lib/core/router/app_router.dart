@@ -156,9 +156,10 @@ class AppRouter {
           name: 'order-details',
           builder: (context, state) {
             final orderId = state.pathParameters['orderId']!;
+            final groupId = state.uri.queryParameters['groupId'];
             return BlocProvider(
               create: (_) => sl<DeliveryBloc>(),
-              child: OrderDetailsPage(orderId: orderId),
+              child: OrderDetailsPage(orderId: orderId, groupId: groupId),
             );
           },
         ),
@@ -207,8 +208,11 @@ class Routes {
   // Helper methods for parameterized routes
   static String deliveryGroupDetails(String groupId) =>
       '/delivery/group/$groupId';
-  static String deliveryOrderDetails(String orderId) =>
-      '/delivery/order/$orderId';
+  static String deliveryOrderDetails(String orderId, {String? groupId}) {
+    final base = '/delivery/order/$orderId';
+    if (groupId == null || groupId.trim().isEmpty) return base;
+    return '$base?groupId=${Uri.encodeComponent(groupId.trim())}';
+  }
 }
 
 /// Refresh notifier for GoRouter to listen to AuthBloc changes

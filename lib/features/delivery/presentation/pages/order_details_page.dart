@@ -2,12 +2,14 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/constants/app_icons.dart';
+import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../domain/entities/delivery_order.dart';
@@ -21,8 +23,9 @@ import '../widgets/widgets.dart';
 /// Screen 4 — Order Details: individual order for delivery.
 class OrderDetailsPage extends StatefulWidget {
   final String orderId;
+  final String? groupId;
 
-  const OrderDetailsPage({super.key, required this.orderId});
+  const OrderDetailsPage({super.key, required this.orderId, this.groupId});
 
   @override
   State<OrderDetailsPage> createState() => _OrderDetailsPageState();
@@ -94,6 +97,17 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
             return DeliveryErrorState(
               message: state.message,
               onRetry: _loadOrderDetails,
+              secondaryActionLabel: 'Quay lại lộ trình',
+              onSecondaryAction: () {
+                final gid = widget.groupId?.trim();
+                if (gid != null && gid.isNotEmpty) {
+                  context.push(
+                    '${Routes.deliveryMap}?groupId=${Uri.encodeComponent(gid)}',
+                  );
+                  return;
+                }
+                Navigator.maybePop(context);
+              },
             );
           }
           return const SizedBox.shrink();
@@ -121,16 +135,20 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      order.orderCode,
-                      style: AppTypography.header2.copyWith(
-                        fontFamily: 'DM Sans',
-                        fontSize: 20,
-                        color: AppColors.textPrimary,
+                    Expanded(
+                      child: Text(
+                        order.orderCode,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.header2.copyWith(
+                          fontFamily: 'DM Sans',
+                          fontSize: 20,
+                          color: AppColors.textPrimary,
+                        ),
                       ),
                     ),
+                    const SizedBox(width: 8),
                     DeliveryOrderStatusBadge(status: order.status),
                   ],
                 ),

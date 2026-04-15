@@ -515,7 +515,8 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
         'define=$defineRaw',
         'hosting=$_androidHostingMode',
         'created=$_debugMapSurfaceCreated style=$_debugMapStyleLoaded mapLoaded=$_debugMapFullyLoaded',
-        if (_debugLastMapLoadError != null) 'mapLoadErr=$_debugLastMapLoadError',
+        if (_debugLastMapLoadError != null)
+          'mapLoadErr=$_debugLastMapLoadError',
       ],
       'compare: mapbox.dev.json MAPBOX_ANDROID_HOSTING',
       'Logcat: filter ThemeUtils AppCompat (expect none)',
@@ -526,7 +527,7 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
       top: top,
       right: 8,
       child: Material(
-        color: Colors.black.withOpacity(0.55),
+        color: AppColors.neutralDark.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(8),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
@@ -616,7 +617,9 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
           );
         }
         if (mounted) {
-          setState(() => _debugLastMapLoadError = '${event.type}: ${event.message}');
+          setState(
+            () => _debugLastMapLoadError = '${event.type}: ${event.message}',
+          );
         }
       },
       onMapCreated: (map) {

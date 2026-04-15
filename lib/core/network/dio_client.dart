@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import '../constants/api_constants.dart';
@@ -27,20 +28,26 @@ class DioClient {
       ),
     );
 
-    _dio.interceptors.addAll([
+    _dio.interceptors.add(
       _AuthInterceptor(
         secureStorage: _secureStorage,
         onRefreshToken: _refreshToken,
       ),
-      PrettyDioLogger(
-        requestHeader: true,
-        requestBody: true,
-        responseHeader: false,
-        responseBody: true,
-        error: true,
-        compact: true,
-      ),
-    ]);
+    );
+
+    if (kDebugMode) {
+      _dio.interceptors.add(
+        PrettyDioLogger(
+          // Avoid leaking sensitive headers/tokens and reduce log overhead.
+          requestHeader: false,
+          requestBody: false,
+          responseHeader: false,
+          responseBody: false,
+          error: true,
+          compact: true,
+        ),
+      );
+    }
   }
 
   Dio get dio => _dio;
