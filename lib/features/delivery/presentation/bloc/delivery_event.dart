@@ -62,6 +62,16 @@ class LoadOrderDetails extends DeliveryEvent {
   List<Object?> get props => [orderId];
 }
 
+/// Refresh delivery group details (reload from API after order action)
+class RefreshDeliveryGroup extends DeliveryEvent {
+  final String groupId;
+
+  const RefreshDeliveryGroup({required this.groupId});
+
+  @override
+  List<Object?> get props => [groupId];
+}
+
 /// Load delivery stats
 class LoadDeliveryStats extends DeliveryEvent {
   const LoadDeliveryStats();
@@ -139,6 +149,7 @@ class ConfirmDelivery extends DeliveryEvent {
 
   /// File local — BLoC upload lên `POST .../proof-image` trước khi confirm.
   final String? proofImagePath;
+
   /// URL https đã có (sau upload); nếu có thì bỏ qua [proofImagePath].
   final String? proofImageUrl;
   final String? notes;
@@ -175,16 +186,24 @@ class ReportDeliveryFailure extends DeliveryEvent {
 
   final String failureReason;
   final String? notes;
+  final List<String>? orderItemIds;
 
   const ReportDeliveryFailure({
     required this.orderId,
     this.deliveryGroupId,
     required this.failureReason,
     this.notes,
+    this.orderItemIds,
   });
 
   @override
-  List<Object?> get props => [orderId, deliveryGroupId, failureReason, notes];
+  List<Object?> get props => [
+    orderId,
+    deliveryGroupId,
+    failureReason,
+    notes,
+    orderItemIds,
+  ];
 }
 
 // ============== UI EVENTS ==============

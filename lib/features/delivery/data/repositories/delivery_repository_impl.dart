@@ -308,6 +308,7 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
     String orderId, {
     required String failureReason,
     String? notes,
+    List<String>? orderItemIds,
   }) async {
     if (!await networkInfo.isConnected) {
       return const Left(NetworkFailure());
@@ -318,6 +319,7 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
         orderId,
         failureReason: failureReason,
         notes: notes,
+        orderItemIds: orderItemIds,
       );
       return Right(order);
     } on UnauthorizedException {

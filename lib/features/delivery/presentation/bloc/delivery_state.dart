@@ -49,6 +49,11 @@ class DeliveryActionError extends DeliveryState {
   List<Object?> get props => [message];
 }
 
+/// Session expired state used to force logout on 401 responses.
+class DeliverySessionExpired extends DeliveryState {
+  const DeliverySessionExpired();
+}
+
 // ============== GROUPS STATES ==============
 
 /// Available groups loaded

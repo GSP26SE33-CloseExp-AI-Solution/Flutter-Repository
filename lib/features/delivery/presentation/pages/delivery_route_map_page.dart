@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 
@@ -11,10 +13,15 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/utils/polyline6_decoder.dart';
 import '../../../../injection_container.dart' show sl;
+import '../../../auth/presentation/bloc/auth_bloc.dart';
+import '../../../auth/presentation/bloc/auth_event.dart';
 import '../../domain/entities/delivery_group.dart';
 import '../../domain/entities/delivery_order.dart';
 import '../../domain/entities/delivery_route_plan.dart';
 import '../../domain/repositories/delivery_repository.dart';
+import '../bloc/delivery_bloc.dart';
+import '../bloc/delivery_event.dart';
+import '../bloc/delivery_state.dart';
 
 /// Map view with backend-optimized route (Mapbox Matrix + Directions via BE).
 class DeliveryRouteMapPage extends StatefulWidget {
@@ -41,6 +48,7 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
 
   MapboxMap? _map;
   PolylineAnnotationManager? _polylineManager;
+  CircleAnnotationManager? _circleManager;
   PointAnnotationManager? _pointManager;
 
   DeliveryGroup? _group;
@@ -51,10 +59,12 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
 
   /// Guard to prevent concurrent annotation application (reduce rebuild churn).
   bool _annotationApplyInProgress = false;
+  int _annotationRetryCount = 0;
+  bool _pendingAnnotationRefresh = false;
+  bool _mapStyleReady = false;
+  Timer? _annotationDebounceTimer;
 
   /// Debug-only: which [_buildMapLayer] branch is active (white area ≠ always MapWidget).
-  bool _debugMapSurfaceCreated = false;
-  bool _debugMapStyleLoaded = false;
   bool _debugMapFullyLoaded = false;
   String? _debugLastMapLoadError;
   bool _controlsExpanded = false;
@@ -62,6 +72,9 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
   bool _mapRenderStalled = false;
   bool _didTryFallbackStyle = false;
   Timer? _mapHealthTimer;
+
+  static const ({double latitude, double longitude}) _fallbackShipperLocation =
+      (latitude: 10.776889, longitude: 106.700806);
 
   bool get _hasValidGroupId {
     final id = widget.groupId?.trim();
@@ -135,8 +148,6 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.groupId != widget.groupId) {
       _mapHealthTimer?.cancel();
-      _debugMapSurfaceCreated = false;
-      _debugMapStyleLoaded = false;
       _debugMapFullyLoaded = false;
       _debugLastMapLoadError = null;
       _fullRenderFrameCount = 0;
@@ -148,6 +159,7 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
   @override
   void dispose() {
     _mapHealthTimer?.cancel();
+    _annotationDebounceTimer?.cancel();
     super.dispose();
   }
 
@@ -180,13 +192,6 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
         });
       }
     });
-  }
-
-  /// Label for the map layer branch (token placeholder / unsupported platform / native MapWidget).
-  String _debugMapBranchLabel() {
-    if (!MapboxConfig.isConfigured) return 'placeholder_token';
-    if (!MapboxConfig.isMapWidgetSupported) return 'placeholder_platform';
-    return 'map_widget';
   }
 
   Future<void> _loadData() async {
@@ -222,12 +227,13 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
         _plan = _createMockRoutePlan();
         _loadError = null;
       });
-      _applyMapAnnotationsIfNecessary();
+      _requestMapAnnotationRefresh();
       return;
     }
 
     if (!_hasValidGroupId) return;
     final gid = widget.groupId!.trim();
+    final shipperStart = _resolveMockShipperLocation();
     setState(() {
       _loading = true;
       _loadError = null;
@@ -236,6 +242,8 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
     final planResult = await _repository.computeDeliveryRoutePlan(
       gid,
       metric: _metric,
+      startLatitude: shipperStart.latitude,
+      startLongitude: shipperStart.longitude,
     );
 
     if (!mounted) return;
@@ -247,7 +255,7 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
           _plan = null;
           _loadError = failure.message;
         });
-        _applyMapAnnotationsIfNecessary();
+        _requestMapAnnotationRefresh();
       },
       (plan) {
         setState(() {
@@ -255,7 +263,7 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
           _plan = plan;
           _loadError = null;
         });
-        _applyMapAnnotationsIfNecessary();
+        _requestMapAnnotationRefresh();
       },
     );
   }
@@ -273,7 +281,12 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
       return;
     }
 
-    // Fallback target when this page was opened via replacement and stack has no previous route.
+    // Prefer returning to the current group's detail page when the stack was replaced.
+    if (_hasValidGroupId) {
+      context.go(Routes.deliveryGroupDetails(widget.groupId!.trim()));
+      return;
+    }
+
     context.go(Routes.deliveryAvailable);
   }
 
@@ -283,9 +296,55 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
     _annotationApplyInProgress = true;
     try {
       await _applyMapAnnotations();
+      _annotationRetryCount = 0;
+    } catch (e) {
+      if (!mounted) return;
+      if (kDebugMode) {
+        debugPrint('Route render failed: $e');
+      }
+
+      if (_annotationRetryCount < 3) {
+        _annotationRetryCount++;
+        Future<void>.delayed(const Duration(milliseconds: 450), () {
+          if (mounted) {
+            _applyMapAnnotationsIfNecessary();
+          }
+        });
+      } else {
+        setState(() {
+          _loadError =
+              'Không thể hiển thị lộ trình trên bản đồ. Vui lòng thử lại.';
+        });
+      }
     } finally {
       _annotationApplyInProgress = false;
     }
+  }
+
+  void _requestMapAnnotationRefresh({
+    Duration delay = const Duration(milliseconds: 180),
+  }) {
+    _pendingAnnotationRefresh = true;
+    _annotationDebounceTimer?.cancel();
+    _annotationDebounceTimer = Timer(delay, () {
+      if (!mounted) return;
+      if (!_debugMapFullyLoaded || !_mapStyleReady) {
+        if (kDebugMode) {
+          debugPrint(
+            'Route render queued: mapLoaded=$_debugMapFullyLoaded styleReady=$_mapStyleReady pending=$_pendingAnnotationRefresh',
+          );
+        }
+        if (_pendingAnnotationRefresh) {
+          _requestMapAnnotationRefresh(
+            delay: const Duration(milliseconds: 220),
+          );
+        }
+        return;
+      }
+      if (!_pendingAnnotationRefresh) return;
+      _pendingAnnotationRefresh = false;
+      _applyMapAnnotationsIfNecessary();
+    });
   }
 
   Future<void> _applyMapAnnotations() async {
@@ -294,10 +353,14 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
 
     _polylineManager ??= await map.annotations
         .createPolylineAnnotationManager();
+    _circleManager ??= await map.annotations.createCircleAnnotationManager();
     _pointManager ??= await map.annotations.createPointAnnotationManager();
 
     await _polylineManager!.deleteAll();
+    await _circleManager!.deleteAll();
     await _pointManager!.deleteAll();
+
+    final shipperLocation = _resolveMockShipperLocation();
 
     final plan = _plan;
     if (plan == null || plan.encodedPolyline.isEmpty) {
@@ -305,78 +368,394 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
       return;
     }
 
-    final decoded = Polyline6Decoder.decode(plan.encodedPolyline);
-    if (decoded.length < 2) {
+    final decoded = _decodeRoutePoints(plan);
+    final sanitizedRoutePoints = _sanitizeRoutePoints(decoded);
+    if (sanitizedRoutePoints.length < 2) {
+      if (kDebugMode) {
+        debugPrint(
+          'Route render skipped: decoded=${decoded.length}, sanitized=${sanitizedRoutePoints.length}, encoding=${plan.polylineEncoding}',
+        );
+      }
       await _fitToOrdersIfPossible();
       return;
     }
 
-    final linePoints = decoded
-        .map((p) => Point(coordinates: Position(p.longitude, p.latitude)))
-        .toList();
-    final line = LineString.fromPoints(points: linePoints);
+    final routePoints = _downsampleRoutePoints(sanitizedRoutePoints);
+
+    final stopPointsForRoute = <({double latitude, double longitude})>[];
+
+    await _createCircleMarker(
+      point: shipperLocation,
+      fillColor: const Color(0xFF1D4ED8),
+      radius: 7,
+      strokeColor: const Color(0xFFFFFFFF),
+      strokeWidth: 2,
+    );
+
+    if (_useMockRoute) {
+      for (final p in routePoints) {
+        stopPointsForRoute.add(p);
+      }
+
+      final adjustedStopPoints = _spreadOverlappingStopPoints(
+        stopPointsForRoute,
+      );
+      for (var i = 0; i < adjustedStopPoints.length; i++) {
+        await _createStopMarker(
+          point: adjustedStopPoints[i],
+          sequenceNumber: i + 1,
+        );
+      }
+    } else {
+      final group = _group;
+      if (group != null && plan.orderedOrderIds.isNotEmpty) {
+        var createdStopMarkers = 0;
+        var fallbackStopMarkers = 0;
+        final stopSequenceNumbers = <int>[];
+        final fallbackPositions = _buildFallbackStopPositions(
+          routePoints,
+          plan.orderedOrderIds.length,
+        );
+
+        for (var i = 0; i < plan.orderedOrderIds.length; i++) {
+          final orderId = plan.orderedOrderIds[i];
+          final orderPoint = _resolveOrderPoint(orderId, group.orders);
+          final fallbackPoint = i < fallbackPositions.length
+              ? fallbackPositions[i]
+              : null;
+          final point = orderPoint ?? fallbackPoint;
+          if (point == null) {
+            continue;
+          }
+
+          if (orderPoint == null) {
+            fallbackStopMarkers++;
+          }
+
+          stopPointsForRoute.add(point);
+          stopSequenceNumbers.add(i + 1);
+          createdStopMarkers++;
+        }
+
+        final adjustedStopPoints = _spreadOverlappingStopPoints(
+          stopPointsForRoute,
+        );
+        for (var i = 0; i < adjustedStopPoints.length; i++) {
+          await _createStopMarker(
+            point: adjustedStopPoints[i],
+            sequenceNumber: stopSequenceNumbers[i],
+          );
+        }
+
+        if (kDebugMode) {
+          debugPrint(
+            'Route stop markers: created=$createdStopMarkers fallback=$fallbackStopMarkers total=${plan.orderedOrderIds.length}',
+          );
+        }
+
+        if (createdStopMarkers == 0 && mounted) {
+          setState(() {
+            _loadError =
+                'Không thể hiển thị điểm dừng trên bản đồ. Dữ liệu tọa độ điểm giao không hợp lệ.';
+          });
+        }
+      }
+    }
+
+    final routePointsForDisplay = _buildDisplayRoutePoints(
+      shipperLocation: shipperLocation,
+      routePoints: routePoints,
+      stopPoints: stopPointsForRoute,
+    );
 
     await _polylineManager!.create(
       PolylineAnnotationOptions(
-        geometry: line,
+        geometry: LineString.fromPoints(
+          points: routePointsForDisplay
+              .map((p) => Point(coordinates: Position(p.longitude, p.latitude)))
+              .toList(),
+        ),
         lineColor: const Color(0xFFE53935).toARGB32(),
         lineWidth: 4,
         lineOpacity: 0.9,
       ),
     );
 
-    if (_useMockRoute) {
-      var seq = 1;
-      for (final p in decoded) {
-        await _pointManager!.create(
-          PointAnnotationOptions(
-            geometry: Point(coordinates: Position(p.longitude, p.latitude)),
-            textField: '$seq',
-            textSize: 14,
-            textColor: const Color(0xFFFFFFFF).toARGB32(),
-            textHaloColor: const Color(0xFF000000).toARGB32(),
-            textHaloWidth: 1,
-          ),
+    if (kDebugMode) {
+      debugPrint(
+        'Route rendered: routePoints=${routePoints.length}, displayRoutePoints=${routePointsForDisplay.length}, orderIds=${plan.orderedOrderIds.length}, skipped=${plan.skippedOrderIds.length}, encoding=${plan.polylineEncoding}',
+      );
+    }
+
+    await _fitCameraToPoints([...routePointsForDisplay, shipperLocation]);
+  }
+
+  Future<void> _createCircleMarker({
+    required ({double latitude, double longitude}) point,
+    required Color fillColor,
+    required double radius,
+    required Color strokeColor,
+    required double strokeWidth,
+  }) async {
+    final circleManager = _circleManager;
+    if (circleManager == null) return;
+
+    await circleManager.create(
+      CircleAnnotationOptions(
+        geometry: Point(coordinates: Position(point.longitude, point.latitude)),
+        circleColor: fillColor.toARGB32(),
+        circleRadius: radius,
+        circleStrokeColor: strokeColor.toARGB32(),
+        circleStrokeWidth: strokeWidth,
+      ),
+    );
+  }
+
+  Future<void> _createStopMarker({
+    required ({double latitude, double longitude}) point,
+    required int sequenceNumber,
+  }) async {
+    await _createCircleMarker(
+      point: point,
+      fillColor: const Color(0xFFE53935),
+      radius: 9,
+      strokeColor: const Color(0xFFFFFFFF),
+      strokeWidth: 2,
+    );
+
+    final pointManager = _pointManager;
+    if (pointManager == null) return;
+
+    await pointManager.create(
+      PointAnnotationOptions(
+        geometry: Point(coordinates: Position(point.longitude, point.latitude)),
+        textField: '$sequenceNumber',
+        textSize: 14,
+        textColor: const Color(0xFFFFFFFF).toARGB32(),
+        textHaloColor: const Color(0xFF000000).toARGB32(),
+        textHaloWidth: 1.5,
+      ),
+    );
+  }
+
+  List<({double latitude, double longitude})> _spreadOverlappingStopPoints(
+    List<({double latitude, double longitude})> points,
+  ) {
+    if (points.length <= 1) return points;
+
+    final adjusted = List<({double latitude, double longitude})>.from(points);
+    final groupedIndexes = <String, List<int>>{};
+    for (var i = 0; i < points.length; i++) {
+      final p = points[i];
+      final key =
+          '${p.latitude.toStringAsFixed(6)}:${p.longitude.toStringAsFixed(6)}';
+      groupedIndexes.putIfAbsent(key, () => <int>[]).add(i);
+    }
+
+    for (final indexes in groupedIndexes.values) {
+      if (indexes.length <= 1) continue;
+
+      for (var i = 0; i < indexes.length; i++) {
+        final index = indexes[i];
+        final base = points[index];
+
+        // Spread markers in a small ring (~8m) so stacked stops remain visible.
+        final angle = (2 * math.pi * i) / indexes.length;
+        const radiusMeters = 8.0;
+        final latOffset = (radiusMeters * math.sin(angle)) / 111320.0;
+        final lngOffset =
+            (radiusMeters * math.cos(angle)) /
+            (111320.0 * math.cos(base.latitude * math.pi / 180.0));
+
+        adjusted[index] = (
+          latitude: base.latitude + latOffset,
+          longitude: base.longitude + lngOffset,
         );
-        seq++;
-      }
-    } else {
-      final group = _group;
-      if (group != null && plan.orderedOrderIds.isNotEmpty) {
-        var seq = 1;
-        for (final oid in plan.orderedOrderIds) {
-          DeliveryOrder? match;
-          for (final o in group.orders) {
-            if (o.orderId == oid) {
-              match = o;
-              break;
-            }
-          }
-          if (match?.latitude != null && match?.longitude != null) {
-            await _pointManager!.create(
-              PointAnnotationOptions(
-                geometry: Point(
-                  coordinates: Position(match!.longitude!, match.latitude!),
-                ),
-                textField: '$seq',
-                textSize: 14,
-                textColor: const Color(0xFFFFFFFF).toARGB32(),
-                textHaloColor: const Color(0xFF000000).toARGB32(),
-                textHaloWidth: 1,
-              ),
-            );
-          }
-          seq++;
-        }
       }
     }
 
-    await _fitCameraToPoints(decoded);
+    return adjusted;
+  }
+
+  List<({double latitude, double longitude})> _buildDisplayRoutePoints({
+    required ({double latitude, double longitude}) shipperLocation,
+    required List<({double latitude, double longitude})> routePoints,
+    required List<({double latitude, double longitude})> stopPoints,
+  }) {
+    final hasMultipleDistinctStops = _countDistinctPoints(stopPoints) >= 2;
+    final basePoints =
+        hasMultipleDistinctStops && routePoints.length < stopPoints.length
+        ? stopPoints
+        : routePoints;
+
+    final result = <({double latitude, double longitude})>[];
+    result.add(shipperLocation);
+
+    for (final p in basePoints) {
+      if (result.isEmpty || !_arePointsNear(result.last, p)) {
+        result.add(p);
+      }
+    }
+
+    if (result.length < 2 && basePoints.isNotEmpty) {
+      result.add(basePoints.first);
+    }
+
+    return result;
+  }
+
+  int _countDistinctPoints(List<({double latitude, double longitude})> points) {
+    final keys = <String>{};
+    for (final p in points) {
+      keys.add(
+        '${p.latitude.toStringAsFixed(6)}:${p.longitude.toStringAsFixed(6)}',
+      );
+    }
+    return keys.length;
+  }
+
+  bool _arePointsNear(
+    ({double latitude, double longitude}) a,
+    ({double latitude, double longitude}) b,
+  ) {
+    return (a.latitude - b.latitude).abs() < 0.00001 &&
+        (a.longitude - b.longitude).abs() < 0.00001;
+  }
+
+  ({double latitude, double longitude})? _resolveOrderPoint(
+    String orderId,
+    List<DeliveryOrder> orders,
+  ) {
+    for (final order in orders) {
+      if (order.orderId != orderId) continue;
+      final lat = order.latitude;
+      final lng = order.longitude;
+      if (lat == null || lng == null) {
+        return null;
+      }
+      return (latitude: lat, longitude: lng);
+    }
+
+    return null;
+  }
+
+  List<({double latitude, double longitude})?> _buildFallbackStopPositions(
+    List<({double latitude, double longitude})> routePoints,
+    int stopCount,
+  ) {
+    if (stopCount <= 0) return const [];
+    if (routePoints.isEmpty) {
+      return List<({double latitude, double longitude})?>.filled(
+        stopCount,
+        null,
+      );
+    }
+
+    if (routePoints.length == 1) {
+      return List<({double latitude, double longitude})?>.filled(
+        stopCount,
+        routePoints.first,
+      );
+    }
+
+    if (stopCount == 1) {
+      return [routePoints.first];
+    }
+
+    final result = <({double latitude, double longitude})?>[];
+    final lastIndex = routePoints.length - 1;
+    final denominator = stopCount - 1;
+    for (var i = 0; i < stopCount; i++) {
+      final idx = ((i * lastIndex) / denominator).round();
+      result.add(routePoints[idx]);
+    }
+
+    return result;
+  }
+
+  List<({double latitude, double longitude})> _decodeRoutePoints(
+    DeliveryRoutePlan plan,
+  ) {
+    final primary = Polyline6Decoder.decodeByEncoding(
+      plan.encodedPolyline,
+      plan.polylineEncoding,
+    );
+    if (!_shouldTryAlternativeDecode(primary)) {
+      return primary;
+    }
+
+    final alt = plan.polylineEncoding.toLowerCase().contains('6')
+        ? Polyline6Decoder.decodeWithPrecision(plan.encodedPolyline, 5)
+        : Polyline6Decoder.decodeWithPrecision(plan.encodedPolyline, 6);
+
+    if (kDebugMode) {
+      debugPrint(
+        'Route decode fallback applied: primary=${primary.length} alt=${alt.length} encoding=${plan.polylineEncoding}',
+      );
+    }
+
+    return alt;
+  }
+
+  bool _shouldTryAlternativeDecode(
+    List<({double latitude, double longitude})> decoded,
+  ) {
+    if (decoded.length < 2) return true;
+
+    final group = _group;
+    final centerLat = group?.centerLatitude;
+    final centerLng = group?.centerLongitude;
+    if (centerLat == null || centerLng == null) return false;
+
+    final first = decoded.first;
+    final latDelta = (first.latitude - centerLat).abs();
+    final lngDelta = (first.longitude - centerLng).abs();
+
+    // If decoded route starts too far from delivery area, precision is likely mismatched.
+    return latDelta > 1.5 || lngDelta > 1.5;
+  }
+
+  List<({double latitude, double longitude})> _sanitizeRoutePoints(
+    List<({double latitude, double longitude})> points,
+  ) {
+    return points.where((p) {
+      final validLat = p.latitude >= -90 && p.latitude <= 90;
+      final validLng = p.longitude >= -180 && p.longitude <= 180;
+      return validLat && validLng;
+    }).toList();
+  }
+
+  List<({double latitude, double longitude})> _downsampleRoutePoints(
+    List<({double latitude, double longitude})> points,
+  ) {
+    const maxPoints = 1200;
+    if (points.length <= maxPoints) return points;
+
+    final step = (points.length / maxPoints).ceil();
+    final sampled = <({double latitude, double longitude})>[];
+    for (var i = 0; i < points.length; i += step) {
+      sampled.add(points[i]);
+    }
+
+    final last = points.last;
+    if (sampled.isEmpty || sampled.last != last) {
+      sampled.add(last);
+    }
+
+    if (kDebugMode) {
+      debugPrint(
+        'Route downsampled from ${points.length} to ${sampled.length} points for render stability.',
+      );
+    }
+    return sampled;
   }
 
   Future<void> _fitToOrdersIfPossible() async {
     if (_useMockRoute) {
-      await _fitCameraToPoints(_mockPointsForRoute());
+      await _fitCameraToPoints([
+        ..._mockPointsForRoute(),
+        _resolveMockShipperLocation(),
+      ]);
       return;
     }
 
@@ -387,8 +766,29 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
         .where((o) => o.latitude != null && o.longitude != null)
         .map((o) => (latitude: o.latitude!, longitude: o.longitude!))
         .toList();
-    if (pts.isEmpty) return;
-    await _fitCameraToPoints(pts);
+    await _fitCameraToPoints([...pts, _resolveMockShipperLocation()]);
+  }
+
+  ({double latitude, double longitude}) _resolveMockShipperLocation() {
+    final group = _group;
+    final groupLat = group?.centerLatitude;
+    final groupLng = group?.centerLongitude;
+    if (groupLat != null && groupLng != null) {
+      return (latitude: groupLat + 0.0012, longitude: groupLng - 0.0010);
+    }
+
+    final points = _useMockRoute
+        ? _mockPointsForRoute()
+        : <({double latitude, double longitude})>[];
+    if (points.isNotEmpty) {
+      final first = points.first;
+      return (
+        latitude: first.latitude + 0.0010,
+        longitude: first.longitude - 0.0010,
+      );
+    }
+
+    return _fallbackShipperLocation;
   }
 
   DeliveryRoutePlan _createMockRoutePlan() {
@@ -503,280 +903,354 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
               ? '${plan.totalDurationMinutes.toStringAsFixed(0)} phút (ước lượng)'
               : '— km • — phút');
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                AppColors.headerGradientStart,
-                AppColors.headerGradientEnd,
-              ],
+    return BlocListener<DeliveryBloc, DeliveryState>(
+      listener: (context, state) {
+        if (state is DeliverySessionExpired) {
+          context.read<AuthBloc>().add(const LogoutEvent());
+          return;
+        }
+        if (state is GroupDetailsLoaded) {
+          // Group was refreshed (after order confirm/fail), trigger rebuild
+          // to update button and map display
+          setState(() {
+            _group = state.group;
+          });
+        } else if (state is DeliveryGroupCompleted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Nhóm giao hàng đã hoàn thành'),
+              backgroundColor: AppColors.successGradientEnd,
             ),
-          ),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => _handleBackNavigation(context),
-        ),
-        title: Text(
-          'Lộ trình giao hàng',
-          style: AppTypography.header1.copyWith(
-            fontSize: 20,
-            color: Colors.white,
-            letterSpacing: -0.60,
-          ),
-        ),
-      ),
-      body: Stack(
-        children: [
-          Positioned.fill(child: _buildMapLayer()),
-          if (kDebugMode && _mapRenderStalled)
-            Positioned(
-              left: 16,
-              right: 16,
-              top: 16,
-              child: Material(
-                color: Colors.amber.shade100,
-                borderRadius: BorderRadius.circular(12),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                  child: Text(
-                    'Ban do dang gap su co hien thi tren thiet bi nay. Thu chuyen che do hosting/texture trong launch config.',
-                    style: AppTypography.bodyRegular1.copyWith(
-                      color: AppColors.neutralDark,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-              ),
+          );
+          // Navigate back to available groups or delivery history
+          context.go(Routes.home);
+        } else if (state is DeliveryActionError &&
+            state.message.contains('hoàn thành')) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: AppColors.error,
             ),
-          if (kDebugMode) _buildDebugMapInspectorOverlay(context),
-          if (_loading)
-            const Positioned.fill(
-              child: IgnorePointer(
-                child: Center(child: CircularProgressIndicator()),
-              ),
-            ),
-        ],
-      ),
-      bottomSheet: SafeArea(
-        top: false,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOut,
-          height: _controlsExpanded ? 330 : 126,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            border: Border(top: BorderSide(color: AppColors.cardBorder)),
-          ),
-          child: ClipRect(
-            child: SingleChildScrollView(
-              physics: _controlsExpanded
-                  ? const BouncingScrollPhysics()
-                  : const NeverScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Chọn lộ trình',
-                          style: AppTypography.header3.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        visualDensity: VisualDensity.compact,
-                        onPressed: () {
-                          setState(
-                            () => _controlsExpanded = !_controlsExpanded,
-                          );
-                        },
-                        icon: Icon(
-                          _controlsExpanded
-                              ? Icons.keyboard_arrow_down
-                              : Icons.keyboard_arrow_up,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Text(
-                    _metric == 'distance' ? distanceSubtitle : durationSubtitle,
-                    style: AppTypography.bodyRegular1.copyWith(
-                      fontSize: 12,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  if (_controlsExpanded) ...[
-                    if (widget.groupId != null &&
-                        widget.groupId!.trim().isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        'Nhóm: ${widget.groupId!.trim()}',
-                        style: AppTypography.bodyRegular1.copyWith(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                    if (_loadError != null) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        _loadError!,
-                        style: AppTypography.bodyRegular1.copyWith(
-                          fontSize: 12,
-                          color: Colors.red.shade700,
-                        ),
-                      ),
-                    ],
-                    if (_plan != null && _plan!.skippedOrderIds.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        'Bỏ qua ${_plan!.skippedOrderIds.length} đơn thiếu tọa độ',
-                        style: AppTypography.bodyRegular1.copyWith(
-                          fontSize: 11,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _RouteOption(
-                            title: 'Tối ưu',
-                            subtitle: _metric == 'distance'
-                                ? distanceSubtitle
-                                : 'Chạm để tối thiểu km',
-                            isActive: _metric == 'distance',
-                            onTap: MapboxConfig.isConfigured && _hasValidGroupId
-                                ? () => _onMetricSelected('distance')
-                                : null,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _RouteOption(
-                            title: 'Nhanh nhất',
-                            subtitle: _metric == 'duration'
-                                ? durationSubtitle
-                                : 'Chạm để tối thiểu phút',
-                            isActive: _metric == 'duration',
-                            onTap: MapboxConfig.isConfigured && _hasValidGroupId
-                                ? () => _onMetricSelected('duration')
-                                : null,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [
-                              AppColors.headerGradientStart,
-                              AppColors.headerGradientEnd,
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: TextButton.icon(
-                          onPressed: () {
-                            if (!MapboxConfig.isConfigured) {
-                              _showMissingTokenHint(context);
-                              return;
-                            }
-                            if (_plan?.orderedOrderIds.isNotEmpty == true) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Giao theo thứ tự đánh số trên bản đồ (mục Đơn hàng để xác nhận từng đơn).',
-                                  ),
-                                ),
-                              );
-                            }
-                          },
-                          icon: const Icon(
-                            Icons.play_arrow,
-                            color: Colors.white,
-                          ),
-                          label: Text(
-                            'Bắt đầu giao hàng',
-                            style: AppTypography.subHeader.copyWith(
-                              color: Colors.white,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+          );
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.headerGradientStart,
+                  AppColors.headerGradientEnd,
                 ],
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  /// On-screen checklist for the "white map" investigation (debug builds only).
-  Widget _buildDebugMapInspectorOverlay(BuildContext context) {
-    final top = MediaQuery.of(context).padding.top + 52;
-    final branch = _debugMapBranchLabel();
-    final defineRaw = _kMapboxAndroidHostingDefine.isEmpty
-        ? '(unset->VD)'
-        : _kMapboxAndroidHostingDefine;
-    final lines = <String>[
-      'branch=$branch',
-      if (branch == 'map_widget') ...[
-        'define=$defineRaw',
-        'hosting=$_androidHostingMode',
-        'texture=$_useTextureView fullFrames=$_fullRenderFrameCount stalled=$_mapRenderStalled',
-        'created=$_debugMapSurfaceCreated style=$_debugMapStyleLoaded mapLoaded=$_debugMapFullyLoaded',
-        if (_debugLastMapLoadError != null)
-          'mapLoadErr=$_debugLastMapLoadError',
-      ],
-      'compare: mapbox.dev.json MAPBOX_ANDROID_HOSTING',
-      'Logcat: filter ThemeUtils AppCompat (expect none)',
-      'still blank+mapLoaded? try launch HC then TLHC_HC',
-      'or other device / emulator GLES (MediaTek quirks)',
-    ];
-    return Positioned(
-      top: top,
-      right: 8,
-      child: Material(
-        color: AppColors.neutralDark.withValues(alpha: 0.8),
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          child: DefaultTextStyle(
-            style: const TextStyle(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => _handleBackNavigation(context),
+          ),
+          title: Text(
+            'Lộ trình giao hàng',
+            style: AppTypography.header1.copyWith(
+              fontSize: 20,
               color: Colors.white,
-              fontSize: 10,
-              height: 1.25,
-              fontFamily: 'monospace',
+              letterSpacing: -0.60,
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisSize: MainAxisSize.min,
-              children: lines.map((s) => Text(s)).toList(),
+          ),
+          actions: [
+            if (_hasValidGroupId)
+              TextButton.icon(
+                onPressed: () => context.go(
+                  Routes.deliveryGroupDetails(widget.groupId!.trim()),
+                ),
+                icon: const Icon(
+                  Icons.assignment_outlined,
+                  color: Colors.white,
+                ),
+                label: Text(
+                  'Nhóm giao',
+                  style: AppTypography.bodyRegular1.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        body: Stack(
+          children: [
+            Positioned.fill(child: _buildMapLayer()),
+            if (kDebugMode && _mapRenderStalled)
+              Positioned(
+                left: 16,
+                right: 16,
+                top: 16,
+                child: Material(
+                  color: Colors.amber.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    child: Text(
+                      'Ban do dang gap su co hien thi tren thiet bi nay. Thu chuyen che do hosting/texture trong launch config.',
+                      style: AppTypography.bodyRegular1.copyWith(
+                        color: AppColors.neutralDark,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            if (_loading)
+              const Positioned.fill(
+                child: IgnorePointer(
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+              ),
+          ],
+        ),
+        bottomSheet: SafeArea(
+          top: false,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOut,
+            height: _controlsExpanded ? 330 : 125,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(top: BorderSide(color: AppColors.cardBorder)),
+            ),
+            child: ClipRect(
+              child: SingleChildScrollView(
+                physics: _controlsExpanded
+                    ? const BouncingScrollPhysics()
+                    : const NeverScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Chọn lộ trình',
+                            style: AppTypography.header3.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          visualDensity: VisualDensity.compact,
+                          onPressed: () {
+                            setState(
+                              () => _controlsExpanded = !_controlsExpanded,
+                            );
+                          },
+                          icon: Icon(
+                            _controlsExpanded
+                                ? Icons.keyboard_arrow_down
+                                : Icons.keyboard_arrow_up,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      _metric == 'distance'
+                          ? distanceSubtitle
+                          : durationSubtitle,
+                      style: AppTypography.bodyRegular1.copyWith(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    if (_plan != null && _plan!.orderedOrderIds.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        'Điểm tiếp theo: ${_resolveOrderAddressLabel(_plan!.orderedOrderIds.first)}',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.bodyRegular1.copyWith(
+                          fontSize: 12,
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                    if (_controlsExpanded) ...[
+                      if (widget.groupId != null &&
+                          widget.groupId!.trim().isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Nhóm: ${widget.groupId!.trim()}',
+                          style: AppTypography.bodyRegular1.copyWith(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                      if (_loadError != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          _loadError!,
+                          style: AppTypography.bodyRegular1.copyWith(
+                            fontSize: 12,
+                            color: Colors.red.shade700,
+                          ),
+                        ),
+                      ],
+                      if (_plan != null &&
+                          _plan!.skippedOrderIds.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          'Bỏ qua ${_plan!.skippedOrderIds.length} đơn thiếu tọa độ',
+                          style: AppTypography.bodyRegular1.copyWith(
+                            fontSize: 11,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                      if (_plan != null &&
+                          _plan!.orderedOrderIds.isNotEmpty &&
+                          _countUnresolvedRouteStops() > 0) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          'Không map được ${_countUnresolvedRouteStops()} điểm sang dữ liệu địa chỉ của nhóm.',
+                          style: AppTypography.bodyRegular1.copyWith(
+                            fontSize: 11,
+                            color: Colors.orange.shade800,
+                          ),
+                        ),
+                      ],
+                      if (_plan != null &&
+                          _group != null &&
+                          _plan!.orderedOrderIds.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          'Thứ tự điểm trên lộ trình',
+                          style: AppTypography.bodyRegular1.copyWith(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            for (
+                              var index = 0;
+                              index < _plan!.orderedOrderIds.length;
+                              index++
+                            )
+                              _RouteStopChip(
+                                index: index + 1,
+                                label: _resolveOrderAddressLabel(
+                                  _plan!.orderedOrderIds[index],
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _RouteOption(
+                              title: 'Tối ưu',
+                              subtitle: _metric == 'distance'
+                                  ? distanceSubtitle
+                                  : 'Chạm để tối thiểu km',
+                              isActive: _metric == 'distance',
+                              onTap:
+                                  MapboxConfig.isConfigured && _hasValidGroupId
+                                  ? () => _onMetricSelected('distance')
+                                  : null,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _RouteOption(
+                              title: 'Nhanh nhất',
+                              subtitle: _metric == 'duration'
+                                  ? durationSubtitle
+                                  : 'Chạm để tối thiểu phút',
+                              isActive: _metric == 'duration',
+                              onTap:
+                                  MapboxConfig.isConfigured && _hasValidGroupId
+                                  ? () => _onMetricSelected('duration')
+                                  : null,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: _isGroupComplete()
+                                  ? [
+                                      AppColors.successGradientStart,
+                                      AppColors.successGradientEnd,
+                                    ]
+                                  : [
+                                      AppColors.headerGradientStart,
+                                      AppColors.headerGradientEnd,
+                                    ],
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: BlocBuilder<DeliveryBloc, DeliveryState>(
+                            builder: (context, state) {
+                              final isLoadingComplete =
+                                  state is DeliveryLoading &&
+                                  (state.message?.contains('hoàn thành nhóm') ??
+                                      false);
+                              return TextButton.icon(
+                                onPressed: (_loading || isLoadingComplete)
+                                    ? null
+                                    : () {
+                                        if (_isGroupComplete()) {
+                                          _onCompleteGroupPressed(context);
+                                        } else {
+                                          _onStartDeliveryPressed(context);
+                                        }
+                                      },
+                                icon: Icon(
+                                  _isGroupComplete()
+                                      ? Icons.check_circle
+                                      : Icons.play_arrow,
+                                  color: Colors.white,
+                                ),
+                                label: Text(
+                                  _isGroupComplete()
+                                      ? 'Hoàn thành nhóm giao'
+                                      : 'Bắt đầu giao hàng',
+                                  style: AppTypography.subHeader.copyWith(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ),
           ),
         ),
@@ -862,16 +1336,14 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
       onMapCreated: (map) {
         _map = map;
         if (mounted) {
-          setState(() {
-            _debugMapSurfaceCreated = true;
-            _debugLastMapLoadError = null;
-          });
+          setState(() => _debugLastMapLoadError = null);
         }
       },
       onStyleLoadedListener: (_) {
         if (mounted) {
-          setState(() => _debugMapStyleLoaded = true);
+          setState(() => _mapStyleReady = true);
         }
+        _requestMapAnnotationRefresh();
       },
       onRenderFrameFinishedListener: (eventData) {
         if (eventData.renderMode == RenderMode.FULL) {
@@ -917,7 +1389,7 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
         }
         _startMapHealthCheck();
         // Apply annotations only after map is fully loaded to avoid blocking render thread.
-        _applyMapAnnotationsIfNecessary();
+        _requestMapAnnotationRefresh(delay: const Duration(milliseconds: 80));
       },
     );
   }
@@ -927,6 +1399,174 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
       const SnackBar(
         content: Text(
           'Chưa có MAPBOX_ACCESS_TOKEN. Vui lòng cấu hình token để dùng bản đồ.',
+        ),
+      ),
+    );
+  }
+
+  String _resolveOrderAddressLabel(String orderId) {
+    final group = _group;
+    if (group == null) return orderId;
+
+    for (final order in group.orders) {
+      if (order.orderId == orderId) {
+        final address = order.destinationAddress.trim();
+        if (address.isNotEmpty) {
+          return '${order.orderCode} - $address';
+        }
+        if (order.orderCode.isNotEmpty) {
+          return order.orderCode;
+        }
+        return orderId;
+      }
+    }
+
+    return orderId;
+  }
+
+  int _countUnresolvedRouteStops() {
+    final plan = _plan;
+    final group = _group;
+    if (plan == null || group == null) return 0;
+
+    final orderIds = group.orders.map((e) => e.orderId).toSet();
+    var unresolved = 0;
+    for (final id in plan.orderedOrderIds) {
+      if (!orderIds.contains(id)) {
+        unresolved++;
+      }
+    }
+    return unresolved;
+  }
+
+  Future<void> _onStartDeliveryPressed(BuildContext context) async {
+    if (!MapboxConfig.isConfigured) {
+      _showMissingTokenHint(context);
+      return;
+    }
+
+    final nextOrderId = _resolveNextOrderIdForExecution();
+    if (nextOrderId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Chưa có đơn hợp lệ để bắt đầu giao. Vui lòng tải lại lộ trình.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final groupId = widget.groupId?.trim();
+    if (kDebugMode) {
+      debugPrint(
+        'Start delivery flow: orderId=$nextOrderId groupId=${groupId ?? "(none)"}',
+      );
+    }
+
+    await context.push(
+      Routes.deliveryOrderDetails(nextOrderId, groupId: groupId),
+    );
+
+    // When returning from order flow, reload group + route-plan to keep
+    // route panel/markers in sync with latest statuses.
+    if (mounted && _hasValidGroupId) {
+      await _loadData();
+    }
+  }
+
+  String? _resolveNextOrderIdForExecution() {
+    final plan = _plan;
+    final group = _group;
+    if (plan == null || group == null) {
+      return null;
+    }
+
+    for (final orderedId in plan.orderedOrderIds) {
+      for (final order in group.orders) {
+        if (order.orderId == orderedId && _isOrderActionable(order)) {
+          return order.orderId;
+        }
+      }
+    }
+
+    for (final order in group.orders) {
+      if (_isOrderActionable(order)) {
+        return order.orderId;
+      }
+    }
+
+    return null;
+  }
+
+  bool _isOrderActionable(DeliveryOrder order) {
+    return !order.isCompleted &&
+        !order.isFailed &&
+        order.status != DeliveryOrderStatus.deliveredWaitConfirm &&
+        order.status != DeliveryOrderStatus.canceled &&
+        order.status != DeliveryOrderStatus.refunded;
+  }
+
+  bool _isGroupComplete() {
+    final group = _group;
+    if (group == null || group.orders.isEmpty) {
+      return false;
+    }
+    // Group is complete if all orders are in terminal state for shipper flow.
+    return group.orders.every(
+      (order) =>
+          order.isCompleted ||
+          order.isFailed ||
+          order.status == DeliveryOrderStatus.deliveredWaitConfirm ||
+          order.status == DeliveryOrderStatus.canceled ||
+          order.status == DeliveryOrderStatus.refunded,
+    );
+  }
+
+  void _onCompleteGroupPressed(BuildContext context) {
+    final groupId = widget.groupId?.trim();
+    if (groupId == null || groupId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Không thể xác định nhóm giao hàng'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    if (kDebugMode) {
+      debugPrint('Complete delivery group: groupId=$groupId');
+    }
+
+    // Dispatch CompleteDeliveryGroup event
+    context.read<DeliveryBloc>().add(CompleteDeliveryGroup(groupId: groupId));
+  }
+}
+
+class _RouteStopChip extends StatelessWidget {
+  final int index;
+  final String label;
+
+  const _RouteStopChip({required this.index, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.routeOptionActiveBackground,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: AppColors.headerGradientEnd.withValues(alpha: 0.25),
+        ),
+      ),
+      child: Text(
+        '$index. $label',
+        style: AppTypography.bodyRegular1.copyWith(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: AppColors.textPrimary,
         ),
       ),
     );

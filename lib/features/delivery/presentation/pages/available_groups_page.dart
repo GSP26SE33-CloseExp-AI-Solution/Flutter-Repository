@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:math' as math;
 
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -18,6 +19,11 @@ class AvailableGroupsPage extends StatefulWidget {
 }
 
 class _AvailableGroupsPageState extends State<AvailableGroupsPage> {
+  static const ({double latitude, double longitude}) _mockShipperLocation = (
+    latitude: 10.776889,
+    longitude: 106.700806,
+  );
+
   @override
   void initState() {
     super.initState();
@@ -34,7 +40,7 @@ class _AvailableGroupsPageState extends State<AvailableGroupsPage> {
       listener: _handleStateChange,
       builder: (context, state) {
         final subtitle = state is AvailableGroupsLoaded
-            ? '${state.groups.length} đơn hàng đang chờ'
+            ? '${state.groups.length} đơn hàng đang chờ • gần shipper trước'
             : null;
 
         return Scaffold(
@@ -109,16 +115,19 @@ class _AvailableGroupsPageState extends State<AvailableGroupsPage> {
   }
 
   Widget _buildGroupsList(List<DeliveryGroupSummary> groups) {
+    final sortedGroups = [...groups]..sort(_compareByDistance);
+
     return RefreshIndicator(
       color: AppColors.headerGradientEnd,
       onRefresh: () async => _loadGroups(),
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
-        itemCount: groups.length,
+        itemCount: sortedGroups.length,
         itemBuilder: (context, index) {
-          final group = groups[index];
+          final group = sortedGroups[index];
           return DeliveryGroupCard(
             group: group,
+            distanceKm: _distanceToGroup(group),
             onTap: () => context.push(
               Routes.deliveryGroupDetails(group.deliveryGroupId),
             ),
@@ -128,6 +137,57 @@ class _AvailableGroupsPageState extends State<AvailableGroupsPage> {
       ),
     );
   }
+
+  int _compareByDistance(DeliveryGroupSummary a, DeliveryGroupSummary b) {
+    final distanceA = _distanceToGroup(a);
+    final distanceB = _distanceToGroup(b);
+
+    if (distanceA == null && distanceB == null) {
+      return a.deliveryDate.compareTo(b.deliveryDate);
+    }
+    if (distanceA == null) return 1;
+    if (distanceB == null) return -1;
+
+    final result = distanceA.compareTo(distanceB);
+    if (result != 0) return result;
+    return a.deliveryDate.compareTo(b.deliveryDate);
+  }
+
+  double? _distanceToGroup(DeliveryGroupSummary group) {
+    final lat = group.centerLatitude;
+    final lng = group.centerLongitude;
+    if (lat == null || lng == null) return null;
+    return _distanceKm(
+      _mockShipperLocation.latitude,
+      _mockShipperLocation.longitude,
+      lat,
+      lng,
+    );
+  }
+
+  double _distanceKm(
+    double startLatitude,
+    double startLongitude,
+    double endLatitude,
+    double endLongitude,
+  ) {
+    const earthRadiusKm = 6371.0;
+    final dLat = _toRadians(endLatitude - startLatitude);
+    final dLng = _toRadians(endLongitude - startLongitude);
+    final lat1 = _toRadians(startLatitude);
+    final lat2 = _toRadians(endLatitude);
+
+    final a =
+        math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(lat1) *
+            math.cos(lat2) *
+            math.sin(dLng / 2) *
+            math.sin(dLng / 2);
+    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    return earthRadiusKm * c;
+  }
+
+  double _toRadians(double degrees) => degrees * (math.pi / 180.0);
 
   void _handleAcceptGroup(DeliveryGroupSummary group) async {
     final confirmed = await showDeliveryConfirmDialog(

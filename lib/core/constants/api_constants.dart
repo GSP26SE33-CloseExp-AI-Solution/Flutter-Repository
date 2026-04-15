@@ -6,13 +6,24 @@
 library;
 
 import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 
 class ApiConstants {
   ApiConstants._();
 
   // Base URL - Environment-aware configuration
   static String get baseUrl {
+    const envBaseUrl = String.fromEnvironment('API_BASE_URL');
+    if (envBaseUrl.isNotEmpty) {
+      return envBaseUrl;
+    }
+
+    if (!kDebugMode) {
+      throw StateError(
+        'Missing API_BASE_URL. Provide it via --dart-define for non-debug builds.',
+      );
+    }
+
     // For web
     if (kIsWeb) {
       return 'http://localhost:5014/api';
@@ -22,7 +33,7 @@ class ApiConstants {
     if (Platform.isAndroid) {
       // Real Device IP address by ethernet cable
       // return 'http://10.159.160.29:5014/api'; // LibraryIP School
-      return 'http://172.31.177.1:5014/api'; // Physical device USB
+      return 'http://172.31.177.220:5014/api'; // Physical device USB
       // return 'http://10.0.2.2:5014/api'; // Android Emulator
     }
     // For iOS

@@ -43,6 +43,14 @@ class _DeliveryGroupDetailsPageState extends State<DeliveryGroupDetailsPage> {
         title: 'Chi tiết nhóm giao',
         actions: [
           IconButton(
+            icon: const Icon(Icons.map_outlined),
+            color: Colors.white,
+            onPressed: () => context.push(
+              '${Routes.deliveryMap}?groupId=${Uri.encodeComponent(widget.groupId)}',
+            ),
+            tooltip: 'Mở bản đồ',
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
             color: AppColors.headerGradientEnd,
             onPressed: _loadGroupDetails,
@@ -195,7 +203,7 @@ class _GroupDetailsContent extends StatelessWidget {
           children: [
             _buildGroupInfoCard(),
             const SizedBox(height: 16),
-            _buildActionButtons(),
+            _buildActionButtons(context),
             const SizedBox(height: 24),
             _buildOrdersSection(context),
             if (group.notes != null && group.notes!.isNotEmpty) ...[
@@ -312,9 +320,28 @@ class _GroupDetailsContent extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButtons() {
+  Widget _buildActionButtons(BuildContext context) {
     return Column(
       children: [
+        if (group.status == DeliveryGroupStatus.assigned ||
+            group.status == DeliveryGroupStatus.inTransit) ...[
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => context.push(
+                '${Routes.deliveryMap}?groupId=${Uri.encodeComponent(group.deliveryGroupId)}',
+              ),
+              icon: const Icon(Icons.map_outlined),
+              label: Text(
+                group.status == DeliveryGroupStatus.inTransit
+                    ? 'Tiếp tục trên bản đồ'
+                    : 'Xem bản đồ giao hàng',
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+
         if (group.status == DeliveryGroupStatus.assigned)
           AppGradientButton(
             onPressed: () => onStartDelivery(group),

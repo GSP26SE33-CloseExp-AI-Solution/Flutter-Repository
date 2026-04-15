@@ -39,11 +39,10 @@ abstract class DeliveryRemoteDataSource {
 
   // Delivery Orders
   Future<DeliveryOrderModel> getOrderDetails(String orderId);
+
   /// BE: POST multipart `file` → dùng URL trả về cho [confirmDelivery].
-  Future<String> uploadDeliveryProofImage(
-    String orderId,
-    String localFilePath,
-  );
+  Future<String> uploadDeliveryProofImage(String orderId, String localFilePath);
+
   /// BE [ConfirmDeliveryRequestDto]: proofImageUrl + verificationCode là bắt buộc.
   Future<DeliveryOrderModel> confirmDelivery(
     String orderId, {
@@ -55,6 +54,7 @@ abstract class DeliveryRemoteDataSource {
     String orderId, {
     required String failureReason,
     String? notes,
+    List<String>? orderItemIds,
   });
 
   // History & Stats
@@ -215,10 +215,7 @@ class DeliveryRemoteDataSourceImpl implements DeliveryRemoteDataSource {
         ApiConstants.deliveryGroupRoutePlan(groupId),
         data: data,
       );
-      return _handleSingleResponse(
-        response,
-        DeliveryRoutePlanModel.fromJson,
-      );
+      return _handleSingleResponse(response, DeliveryRoutePlanModel.fromJson);
     } on DioException {
       rethrow;
     } catch (e) {
@@ -318,11 +315,18 @@ class DeliveryRemoteDataSourceImpl implements DeliveryRemoteDataSource {
     String orderId, {
     required String failureReason,
     String? notes,
+    List<String>? orderItemIds,
   }) async {
     try {
+      final payload = <String, dynamic>{
+        'failureReason': failureReason,
+        if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
+        if (orderItemIds != null && orderItemIds.isNotEmpty)
+          'orderItemIds': orderItemIds,
+      };
       final response = await _dio.post(
         ApiConstants.reportDeliveryFailure(orderId),
-        data: {'failureReason': failureReason, 'notes': notes},
+        data: payload,
       );
       // Backend returns DeliveryOrderResponseDto after failure report.
       return _handleSingleResponse(response, DeliveryOrderModel.fromJson);

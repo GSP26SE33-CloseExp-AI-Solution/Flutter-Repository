@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/error/failures.dart';
 import '../../domain/repositories/delivery_repository.dart';
 import 'delivery_event.dart';
 import 'delivery_state.dart';
@@ -17,6 +18,7 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
     on<LoadMyGroups>(_onLoadMyGroups);
     on<LoadGroupDetails>(_onLoadGroupDetails);
     on<LoadOrderDetails>(_onLoadOrderDetails);
+    on<RefreshDeliveryGroup>(_onRefreshDeliveryGroup);
     on<LoadDeliveryStats>(_onLoadDeliveryStats);
     on<LoadDeliveryHistory>(_onLoadDeliveryHistory);
 
@@ -32,6 +34,24 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
     on<ResetDeliveryState>(_onReset);
   }
 
+  void _emitFailure(
+    Failure failure,
+    Emitter<DeliveryState> emit, {
+    required bool isAction,
+  }) {
+    if (failure is UnauthorizedFailure) {
+      emit(const DeliverySessionExpired());
+      return;
+    }
+
+    if (isAction) {
+      emit(DeliveryActionError(message: failure.message));
+      return;
+    }
+
+    emit(DeliveryError(message: failure.message));
+  }
+
   // ============== LOAD HANDLERS ==============
 
   Future<void> _onLoadAvailableGroups(
@@ -45,7 +65,7 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
     );
 
     result.fold(
-      (failure) => emit(DeliveryError(message: failure.message)),
+      (failure) => _emitFailure(failure, emit, isAction: false),
       (groups) => emit(AvailableGroupsLoaded(groups: groups)),
     );
   }
@@ -68,7 +88,7 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
       );
 
       result.fold(
-        (failure) => emit(DeliveryError(message: failure.message)),
+        (failure) => _emitFailure(failure, emit, isAction: false),
         (paginated) => emit(
           currentState.copyWith(
             groups: [...currentState.groups, ...paginated.groups],
@@ -115,7 +135,7 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
     final result = await _repository.getDeliveryGroupById(event.groupId);
 
     result.fold(
-      (failure) => emit(DeliveryError(message: failure.message)),
+      (failure) => _emitFailure(failure, emit, isAction: false),
       (group) => emit(GroupDetailsLoaded(group: group)),
     );
   }
@@ -129,9 +149,21 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
     final result = await _repository.getOrderDetails(event.orderId);
 
     result.fold(
-      (failure) => emit(DeliveryError(message: failure.message)),
+      (failure) => _emitFailure(failure, emit, isAction: false),
       (order) => emit(OrderDetailsLoaded(order: order)),
     );
+  }
+
+  Future<void> _onRefreshDeliveryGroup(
+    RefreshDeliveryGroup event,
+    Emitter<DeliveryState> emit,
+  ) async {
+    // Silently reload group without changing loading state
+    final result = await _repository.getDeliveryGroupById(event.groupId);
+
+    result.fold((failure) {
+      _emitFailure(failure, emit, isAction: false);
+    }, (group) => emit(GroupDetailsLoaded(group: group)));
   }
 
   Future<void> _onLoadDeliveryStats(
@@ -143,7 +175,7 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
     final result = await _repository.getDeliveryStats();
 
     result.fold(
-      (failure) => emit(DeliveryError(message: failure.message)),
+      (failure) => _emitFailure(failure, emit, isAction: false),
       (stats) => emit(DeliveryStatsLoaded(stats: stats)),
     );
   }
@@ -169,7 +201,7 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
       );
 
       result.fold(
-        (failure) => emit(DeliveryError(message: failure.message)),
+        (failure) => _emitFailure(failure, emit, isAction: false),
         (paginated) => emit(
           currentState.copyWith(
             records: [...currentState.records, ...paginated.records],
@@ -193,7 +225,7 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
       );
 
       result.fold(
-        (failure) => emit(DeliveryError(message: failure.message)),
+        (failure) => _emitFailure(failure, emit, isAction: false),
         (paginated) => emit(
           DeliveryHistoryLoaded(
             records: paginated.records,
@@ -221,7 +253,7 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
     );
 
     result.fold(
-      (failure) => emit(DeliveryActionError(message: failure.message)),
+      (failure) => _emitFailure(failure, emit, isAction: true),
       (group) => emit(DeliveryGroupAccepted(group: group)),
     );
   }
@@ -238,7 +270,7 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
     );
 
     result.fold(
-      (failure) => emit(DeliveryActionError(message: failure.message)),
+      (failure) => _emitFailure(failure, emit, isAction: true),
       (group) => emit(DeliveryStarted(group: group)),
     );
   }
@@ -252,7 +284,7 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
     final result = await _repository.completeDeliveryGroup(event.groupId);
 
     result.fold(
-      (failure) => emit(DeliveryActionError(message: failure.message)),
+      (failure) => _emitFailure(failure, emit, isAction: true),
       (group) => emit(DeliveryGroupCompleted(group: group)),
     );
   }
@@ -274,16 +306,6 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
       return;
     }
 
-    final groupId = event.deliveryGroupId?.trim();
-    if (groupId != null && groupId.isNotEmpty) {
-      final startRes = await _repository.startDelivery(groupId);
-      final startErr = startRes.fold((f) => f.message, (_) => null);
-      if (startErr != null) {
-        emit(DeliveryActionError(message: startErr));
-        return;
-      }
-    }
-
     // BE bắt buộc proofImageUrl (URL http/https); ưu tiên URL có sẵn, không thì upload proof-image.
     var proofUrl = event.proofImageUrl?.trim() ?? '';
     if (proofUrl.isEmpty) {
@@ -301,13 +323,10 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
         event.orderId,
         path,
       );
-      proofUrl = uploadRes.fold(
-        (f) {
-          emit(DeliveryActionError(message: f.message));
-          return '';
-        },
-        (url) => url,
-      );
+      proofUrl = uploadRes.fold((f) {
+        emit(DeliveryActionError(message: f.message));
+        return '';
+      }, (url) => url);
       if (proofUrl.isEmpty) return;
     }
 
@@ -319,7 +338,7 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
     );
 
     result.fold(
-      (failure) => emit(DeliveryActionError(message: failure.message)),
+      (failure) => _emitFailure(failure, emit, isAction: true),
       (order) => emit(DeliveryConfirmed(order: order)),
     );
   }
@@ -330,24 +349,15 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
   ) async {
     emit(const DeliveryLoading(message: 'Đang báo cáo thất bại...'));
 
-    final groupId = event.deliveryGroupId?.trim();
-    if (groupId != null && groupId.isNotEmpty) {
-      final startRes = await _repository.startDelivery(groupId);
-      final startErr = startRes.fold((f) => f.message, (_) => null);
-      if (startErr != null) {
-        emit(DeliveryActionError(message: startErr));
-        return;
-      }
-    }
-
     final result = await _repository.reportDeliveryFailure(
       event.orderId,
       failureReason: event.failureReason,
       notes: event.notes,
+      orderItemIds: event.orderItemIds,
     );
 
     result.fold(
-      (failure) => emit(DeliveryActionError(message: failure.message)),
+      (failure) => _emitFailure(failure, emit, isAction: true),
       (order) => emit(DeliveryFailureReported(order: order)),
     );
   }

@@ -66,17 +66,13 @@ class DeliveryOrder extends Equatable {
   /// Check if this is a home delivery
   bool get isHomeDelivery {
     final t = _normalizeDeliveryType(deliveryType);
-    return t == 'delivery' ||
-        t == 'home' ||
-        t == 'homedelivery';
+    return t == 'delivery' || t == 'home' || t == 'homedelivery';
   }
 
   /// Check if this is a pickup order
   bool get isPickup {
     final t = _normalizeDeliveryType(deliveryType);
-    return t == 'pickup' ||
-        t == 'storepickup' ||
-        t == 'collectionpoint';
+    return t == 'pickup' || t == 'storepickup' || t == 'collectionpoint';
   }
 
   /// Get the delivery destination address shown on cards (home: addressLine; pickup: point address or name)
@@ -145,8 +141,10 @@ enum DeliveryOrderStatus {
   canceled,
   refunded,
   failed,
+
   /// [DeliveryState.PickedUp] in delivery logs / history API
   pickedUp,
+
   /// [DeliveryState.InTransit] in delivery logs / history API
   deliveryInTransit;
 
@@ -237,6 +235,9 @@ class DeliveryOrderItem extends Equatable {
   final int quantity;
   final double unitPrice;
   final double subTotal;
+  final String packagingStatus;
+  final String? deliveryStatus;
+  final String? deliveryGroupId;
 
   const DeliveryOrderItem({
     required this.orderItemId,
@@ -244,7 +245,20 @@ class DeliveryOrderItem extends Equatable {
     required this.quantity,
     required this.unitPrice,
     required this.subTotal,
+    this.packagingStatus = '',
+    this.deliveryStatus,
+    this.deliveryGroupId,
   });
+
+  static String _norm(String? x) =>
+      (x ?? '').trim().toLowerCase().replaceAll('_', '');
+
+  bool get isPackagingCompleted => _norm(packagingStatus) == 'completed';
+
+  bool get isDeliveryTerminalForFailure {
+    final s = _norm(deliveryStatus);
+    return s == 'completed' || s == 'failed' || s == 'deliveredwaitconfirm';
+  }
 
   @override
   List<Object?> get props => [
@@ -253,6 +267,9 @@ class DeliveryOrderItem extends Equatable {
     quantity,
     unitPrice,
     subTotal,
+    packagingStatus,
+    deliveryStatus,
+    deliveryGroupId,
   ];
 }
 

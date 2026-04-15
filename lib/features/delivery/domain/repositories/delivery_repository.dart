@@ -75,6 +75,7 @@ abstract class DeliveryRepository {
     String orderId, {
     required String failureReason,
     String? notes,
+    List<String>? orderItemIds,
   });
 
   // ============== HISTORY & STATS ==============

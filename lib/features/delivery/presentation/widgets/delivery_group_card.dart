@@ -14,6 +14,7 @@ class DeliveryGroupCard extends StatelessWidget {
   final VoidCallback? onStart;
   final VoidCallback? onComplete;
   final bool showAcceptButton;
+  final double? distanceKm;
 
   const DeliveryGroupCard({
     super.key,
@@ -23,6 +24,7 @@ class DeliveryGroupCard extends StatelessWidget {
     this.onStart,
     this.onComplete,
     this.showAcceptButton = true,
+    this.distanceKm,
   });
 
   @override
@@ -110,8 +112,16 @@ class DeliveryGroupCard extends StatelessWidget {
                                 if (group.pendingOrders > 0)
                                   _Pill(
                                     text: '${group.pendingOrders} chờ giao',
-                                    background: AppColors.badgePendingBackground,
+                                    background:
+                                        AppColors.badgePendingBackground,
                                     textColor: AppColors.badgePendingText,
+                                  ),
+                                if (distanceKm != null)
+                                  _Pill(
+                                    text: _distanceLabel(distanceKm!),
+                                    background: AppColors.successGradientStart
+                                        .withValues(alpha: 0.12),
+                                    textColor: AppColors.successGradientEnd,
                                   ),
                               ],
                             ),
@@ -259,6 +269,16 @@ class DeliveryGroupCard extends StatelessWidget {
       ),
     );
   }
+}
+
+String _distanceLabel(double distanceKm) {
+  if (distanceKm < 1) {
+    return '${(distanceKm * 1000).round()} m';
+  }
+  if (distanceKm < 10) {
+    return '${distanceKm.toStringAsFixed(1)} km';
+  }
+  return '${distanceKm.round()} km';
 }
 
 // ── Private helpers

@@ -12,6 +12,9 @@ import '../../../../core/constants/app_icons.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../auth/presentation/bloc/auth_bloc.dart';
+import '../../../auth/presentation/bloc/auth_event.dart';
+import '../../domain/entities/delivery_group.dart';
 import '../../domain/entities/delivery_order.dart';
 import '../bloc/delivery_bloc.dart';
 import '../bloc/delivery_event.dart';
@@ -45,28 +48,75 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     context.read<DeliveryBloc>().add(LoadOrderDetails(orderId: widget.orderId));
   }
 
+  String? _findNextActionableOrderId(DeliveryGroup group) {
+    for (final order in group.orders) {
+      if (!order.isCompleted &&
+          !order.isFailed &&
+          order.status != DeliveryOrderStatus.deliveredWaitConfirm &&
+          order.status != DeliveryOrderStatus.canceled &&
+          order.status != DeliveryOrderStatus.refunded) {
+        return order.orderId;
+      }
+    }
+    return null;
+  }
+
+  void _onOrderActionSuccess(String actionType) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          actionType == 'confirm'
+              ? 'Đã xác nhận giao hàng thành công'
+              : 'Đã báo cáo giao hàng thất bại',
+        ),
+        backgroundColor: actionType == 'confirm'
+            ? AppColors.successGradientEnd
+            : AppColors.headerGradientEnd,
+      ),
+    );
+
+    // Refresh group to get updated order statuses
+    final groupId = widget.groupId?.trim();
+    if (groupId != null && groupId.isNotEmpty) {
+      context.read<DeliveryBloc>().add(RefreshDeliveryGroup(groupId: groupId));
+    } else {
+      Navigator.pop(context);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const GradientAppBar(title: 'Chi tiết đơn hàng'),
       body: BlocConsumer<DeliveryBloc, DeliveryState>(
         listener: (context, state) {
+          if (state is DeliverySessionExpired) {
+            context.read<AuthBloc>().add(const LogoutEvent());
+            return;
+          }
           if (state is DeliveryConfirmed) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Đã xác nhận giao hàng thành công'),
-                backgroundColor: AppColors.successGradientEnd,
-              ),
-            );
-            Navigator.pop(context);
+            _onOrderActionSuccess('confirm');
           } else if (state is DeliveryFailureReported) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Đã báo cáo giao hàng thất bại'),
-                backgroundColor: AppColors.headerGradientEnd,
-              ),
-            );
-            Navigator.pop(context);
+            _onOrderActionSuccess('failure');
+          } else if (state is GroupDetailsLoaded) {
+            // Auto-navigate to next actionable order after group refresh
+            final nextOrderId = _findNextActionableOrderId(state.group);
+            if (nextOrderId != null) {
+              final groupId = widget.groupId?.trim();
+              context.pop();
+              context.push(
+                Routes.deliveryOrderDetails(nextOrderId, groupId: groupId),
+              );
+            } else {
+              // No more actionable orders
+              context.pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Tất cả đơn hàng đã được xử lý'),
+                  backgroundColor: AppColors.successGradientEnd,
+                ),
+              );
+            }
           } else if (state is DeliveryError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -806,6 +856,22 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     return null;
   }
 
+  List<String> _collectEligibleFailureOrderItemIds(DeliveryOrder order) {
+    final groupId = order.deliveryGroupId?.trim().toLowerCase();
+    return order.items
+        .where((item) {
+          final itemGroupId = item.deliveryGroupId?.trim().toLowerCase();
+          final inCurrentGroup =
+              groupId == null || groupId.isEmpty || itemGroupId == groupId;
+          return inCurrentGroup &&
+              item.isPackagingCompleted &&
+              !item.isDeliveryTerminalForFailure;
+        })
+        .map((item) => item.orderItemId.trim())
+        .where((id) => id.isNotEmpty)
+        .toList(growable: false);
+  }
+
   Future<void> _openQrScan(DeliveryOrder order) async {
     final qrCode = await showQrScanModal(context);
     if (!mounted || qrCode == null || qrCode.trim().isEmpty) return;
@@ -865,6 +931,20 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
   }
 
   Future<void> _openFailureSheet(DeliveryOrder order) async {
+    final eligibleOrderItemIds = _collectEligibleFailureOrderItemIds(order);
+    if (eligibleOrderItemIds.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Đơn hiện không có dòng hàng đủ điều kiện để báo giao thất bại.',
+          ),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
     const reasons = [
       'Khách không nghe máy',
       'Khách hủy đơn',
@@ -880,6 +960,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
         deliveryGroupId: order.deliveryGroupId,
         failureReason: result.reason,
         notes: result.notes,
+        orderItemIds: eligibleOrderItemIds,
       ),
     );
   }

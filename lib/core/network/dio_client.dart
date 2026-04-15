@@ -161,7 +161,7 @@ class _AuthInterceptor extends QueuedInterceptor {
   ];
 
   bool _isPublicEndpoint(String path) {
-    return _publicEndpoints.any((endpoint) => path.contains(endpoint));
+    return _publicEndpoints.any((endpoint) => path == endpoint);
   }
 
   @override

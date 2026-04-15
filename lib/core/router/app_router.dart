@@ -183,7 +183,10 @@ class AppRouter {
             final groupId = state.uri.queryParameters['groupId'];
             return MaterialPage<void>(
               fullscreenDialog: true,
-              child: DeliveryRouteMapPage(groupId: groupId),
+              child: BlocProvider(
+                create: (_) => sl<DeliveryBloc>(),
+                child: DeliveryRouteMapPage(groupId: groupId),
+              ),
             );
           },
         ),

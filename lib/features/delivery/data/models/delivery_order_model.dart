@@ -105,6 +105,9 @@ class DeliveryOrderItemModel extends DeliveryOrderItem {
     required super.quantity,
     required super.unitPrice,
     required super.subTotal,
+    required super.packagingStatus,
+    super.deliveryStatus,
+    super.deliveryGroupId,
   });
 
   factory DeliveryOrderItemModel.fromJson(Map<String, dynamic> json) {
@@ -114,6 +117,11 @@ class DeliveryOrderItemModel extends DeliveryOrderItem {
       quantity: json['quantity'] as int? ?? 0,
       unitPrice: (json['unitPrice'] as num?)?.toDouble() ?? 0,
       subTotal: (json['subTotal'] as num?)?.toDouble() ?? 0,
+      packagingStatus: json['packagingStatus'] as String? ?? '',
+      deliveryStatus: json['deliveryStatus'] as String?,
+      deliveryGroupId: DeliveryOrderModel._optionalGuidString(
+        json['deliveryGroupId'],
+      ),
     );
   }
 
@@ -124,6 +132,9 @@ class DeliveryOrderItemModel extends DeliveryOrderItem {
       'quantity': quantity,
       'unitPrice': unitPrice,
       'subTotal': subTotal,
+      'packagingStatus': packagingStatus,
+      'deliveryStatus': deliveryStatus,
+      'deliveryGroupId': deliveryGroupId,
     };
   }
 }
