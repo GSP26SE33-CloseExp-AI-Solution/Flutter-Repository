@@ -16,6 +16,7 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
     // Load events
     on<LoadAvailableGroups>(_onLoadAvailableGroups);
     on<LoadMyGroups>(_onLoadMyGroups);
+    on<LoadMyWorkQueue>(_onLoadMyWorkQueue);
     on<LoadGroupDetails>(_onLoadGroupDetails);
     on<LoadOrderDetails>(_onLoadOrderDetails);
     on<RefreshDeliveryGroup>(_onRefreshDeliveryGroup);
@@ -85,6 +86,9 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
         pageSize: event.pageSize,
         status: event.status,
         deliveryDate: event.deliveryDate,
+        sortBy: event.sortBy,
+        currentLatitude: event.currentLatitude,
+        currentLongitude: event.currentLongitude,
       );
 
       result.fold(
@@ -109,6 +113,9 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
         pageSize: event.pageSize,
         status: event.status,
         deliveryDate: event.deliveryDate,
+        sortBy: event.sortBy,
+        currentLatitude: event.currentLatitude,
+        currentLongitude: event.currentLongitude,
       );
 
       result.fold(
@@ -120,10 +127,41 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
             totalPages: paginated.totalPages,
             totalCount: paginated.totalCount,
             hasNextPage: paginated.hasNextPage,
+            isWorkQueue: false,
           ),
         ),
       );
     }
+  }
+
+  Future<void> _onLoadMyWorkQueue(
+    LoadMyWorkQueue event,
+    Emitter<DeliveryState> emit,
+  ) async {
+    emit(const DeliveryLoading(message: 'Đang tải danh sách ưu tiên...'));
+
+    final result = await _repository.getMyWorkQueue(
+      limit: event.limit,
+      status: event.status,
+      deliveryDate: event.deliveryDate,
+      sortBy: event.sortBy,
+      currentLatitude: event.currentLatitude,
+      currentLongitude: event.currentLongitude,
+    );
+
+    result.fold(
+      (failure) => _emitFailure(failure, emit, isAction: false),
+      (groups) => emit(
+        MyGroupsLoaded(
+          groups: groups,
+          currentPage: 1,
+          totalPages: 1,
+          totalCount: groups.length,
+          hasNextPage: false,
+          isWorkQueue: true,
+        ),
+      ),
+    );
   }
 
   Future<void> _onLoadGroupDetails(

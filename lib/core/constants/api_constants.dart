@@ -33,8 +33,8 @@ class ApiConstants {
     if (Platform.isAndroid) {
       // Real Device IP address by ethernet cable
       // return 'http://10.159.160.29:5014/api'; // LibraryIP School
-      return 'http://172.31.177.220:5014/api'; // Physical device USB
-      // return 'http://10.0.2.2:5014/api'; // Android Emulator
+      // return 'http://172.31.177.220:5014/api'; // Physical device USB
+      return 'http://10.0.2.2:5014/api'; // Android Emulator
     }
     // For iOS
     if (Platform.isIOS) {
@@ -67,6 +67,8 @@ class ApiConstants {
   // Delivery Groups
   static const String deliveryGroupsAvailable = '/delivery/groups/available';
   static const String deliveryGroupsMy = '/delivery/groups/my';
+  static const String deliveryGroupsMyWorkQueue =
+      '/delivery/groups/my/work-queue';
   static String deliveryGroupById(String id) => '/delivery/groups/$id';
   static String acceptDeliveryGroup(String id) => '/delivery/groups/$id/accept';
   static String startDeliveryGroup(String id) => '/delivery/groups/$id/start';
@@ -95,6 +97,11 @@ class ApiConstants {
   /// Query `status` cho GET /delivery/groups/my — khớp chuỗi trạng thái nhóm trên BE (vd. InTransit).
   static const String deliveryMyGroupsStatusActive = 'InTransit';
   static const String deliveryMyGroupsStatusCompleted = 'Completed';
+
+  /// Sort modes for GET /delivery/groups/my and /delivery/groups/my/work-queue
+  static const String deliveryGroupSortBalanced = 'balanced';
+  static const String deliveryGroupSortTimeFirst = 'timeFirst';
+  static const String deliveryGroupSortDistanceFirst = 'distanceFirst';
 
   // ============== UPLOAD ENDPOINTS ==============
   static const String upload = '/upload';

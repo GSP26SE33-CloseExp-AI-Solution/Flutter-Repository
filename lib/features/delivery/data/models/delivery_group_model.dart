@@ -102,6 +102,11 @@ class DeliveryGroupSummaryModel extends DeliveryGroupSummary {
     required super.totalOrders,
     required super.completedOrders,
     required super.deliveryDate,
+    super.slotStartAtUtc,
+    super.slotEndAtUtc,
+    super.distanceFromCurrentKm,
+    super.priorityScore,
+    super.priorityReasons,
   });
 
   factory DeliveryGroupSummaryModel.fromJson(Map<String, dynamic> json) {
@@ -117,6 +122,16 @@ class DeliveryGroupSummaryModel extends DeliveryGroupSummary {
       totalOrders: json['totalOrders'] as int? ?? 0,
       completedOrders: json['completedOrders'] as int? ?? 0,
       deliveryDate: _parseDateTime(json['deliveryDate']),
+      slotStartAtUtc: _tryParseDateTime(json['slotStartAtUtc']),
+      slotEndAtUtc: _tryParseDateTime(json['slotEndAtUtc']),
+      distanceFromCurrentKm: (json['distanceFromCurrentKm'] as num?)
+          ?.toDouble(),
+      priorityScore: (json['priorityScore'] as num?)?.toDouble(),
+      priorityReasons:
+          (json['priorityReasons'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
     );
   }
 
@@ -133,6 +148,11 @@ class DeliveryGroupSummaryModel extends DeliveryGroupSummary {
       'totalOrders': totalOrders,
       'completedOrders': completedOrders,
       'deliveryDate': deliveryDate.toIso8601String(),
+      'slotStartAtUtc': slotStartAtUtc?.toIso8601String(),
+      'slotEndAtUtc': slotEndAtUtc?.toIso8601String(),
+      'distanceFromCurrentKm': distanceFromCurrentKm,
+      'priorityScore': priorityScore,
+      'priorityReasons': priorityReasons,
     };
   }
 
@@ -140,5 +160,12 @@ class DeliveryGroupSummaryModel extends DeliveryGroupSummary {
     if (dateTime == null) return DateTime.now();
     if (dateTime is String) return DateTime.parse(dateTime);
     return DateTime.now();
+  }
+
+  static DateTime? _tryParseDateTime(dynamic dateTime) {
+    if (dateTime is String && dateTime.isNotEmpty) {
+      return DateTime.tryParse(dateTime);
+    }
+    return null;
   }
 }

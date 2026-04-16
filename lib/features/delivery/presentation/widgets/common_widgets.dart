@@ -92,6 +92,8 @@ class AppGradientButton extends StatelessWidget {
   final Widget child;
   final double height;
   final double borderRadius;
+  final Gradient? enabledGradient;
+  final List<BoxShadow>? enabledBoxShadow;
 
   const AppGradientButton({
     super.key,
@@ -99,6 +101,8 @@ class AppGradientButton extends StatelessWidget {
     required this.child,
     this.height = 50,
     this.borderRadius = 20,
+    this.enabledGradient,
+    this.enabledBoxShadow,
   });
 
   @override
@@ -110,25 +114,27 @@ class AppGradientButton extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: isDisabled
               ? null
-              : const LinearGradient(
-                  colors: [
-                    AppColors.primaryGradientStart,
-                    AppColors.primaryGradientEnd,
-                  ],
-                ),
+              : (enabledGradient ??
+                    const LinearGradient(
+                      colors: [
+                        AppColors.primaryGradientStart,
+                        AppColors.primaryGradientEnd,
+                      ],
+                    )),
           color: isDisabled ? AppColors.neutralLight : null,
           borderRadius: BorderRadius.circular(borderRadius),
           boxShadow: isDisabled
               ? null
-              : [
-                  BoxShadow(
-                    color: AppColors.primaryButtonShadow.withValues(
-                      alpha: 0.10,
-                    ),
-                    blurRadius: 30,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
+              : (enabledBoxShadow ??
+                    [
+                      BoxShadow(
+                        color: AppColors.primaryButtonShadow.withValues(
+                          alpha: 0.10,
+                        ),
+                        blurRadius: 30,
+                        offset: const Offset(0, 10),
+                      ),
+                    ]),
         ),
         child: Material(
           color: Colors.transparent,

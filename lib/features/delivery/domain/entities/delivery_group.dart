@@ -189,6 +189,13 @@ class DeliveryGroupSummary extends Equatable {
   final int completedOrders;
   final DateTime deliveryDate;
 
+  /// Additive metadata from BE for prioritized queue/sorting.
+  final DateTime? slotStartAtUtc;
+  final DateTime? slotEndAtUtc;
+  final double? distanceFromCurrentKm;
+  final double? priorityScore;
+  final List<String> priorityReasons;
+
   const DeliveryGroupSummary({
     required this.deliveryGroupId,
     required this.groupCode,
@@ -201,6 +208,11 @@ class DeliveryGroupSummary extends Equatable {
     required this.totalOrders,
     required this.completedOrders,
     required this.deliveryDate,
+    this.slotStartAtUtc,
+    this.slotEndAtUtc,
+    this.distanceFromCurrentKm,
+    this.priorityScore,
+    this.priorityReasons = const [],
   });
 
   int get pendingOrders => totalOrders - completedOrders;
@@ -230,5 +242,10 @@ class DeliveryGroupSummary extends Equatable {
     totalOrders,
     completedOrders,
     deliveryDate,
+    slotStartAtUtc,
+    slotEndAtUtc,
+    distanceFromCurrentKm,
+    priorityScore,
+    priorityReasons,
   ];
 }

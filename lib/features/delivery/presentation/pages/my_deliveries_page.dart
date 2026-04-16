@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/constants/api_constants.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../injection_container.dart';
 import '../../domain/entities/delivery_group.dart';
+import '../../domain/services/shipper_location_service.dart';
 import '../bloc/delivery_bloc.dart';
 import '../bloc/delivery_event.dart';
 import '../bloc/delivery_state.dart';
@@ -23,7 +26,14 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final ScrollController _scrollController = ScrollController();
+  final ShipperLocationService _shipperLocationService =
+      sl<ShipperLocationService>();
   String? _pendingMapGroupId;
+  String _selectedSortBy = ApiConstants.deliveryGroupSortBalanced;
+  bool _useWorkQueueMode = true;
+  int _workQueueLimit = 10;
+  ({double latitude, double longitude})? _shipperLocation;
+  bool _isResolvingLocation = false;
 
   @override
   void initState() {
@@ -50,12 +60,19 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
   void _onScroll() {
     final state = context.read<DeliveryBloc>().state;
     if (state is MyGroupsLoaded &&
+        !state.isWorkQueue &&
         state.hasNextPage &&
         !state.isLoadingMore &&
         _scrollController.position.pixels >=
             _scrollController.position.maxScrollExtent - 200) {
       context.read<DeliveryBloc>().add(
-        LoadMyGroups(page: state.currentPage + 1, status: _getCurrentStatus()),
+        LoadMyGroups(
+          page: state.currentPage + 1,
+          status: _getCurrentStatus(),
+          sortBy: _selectedSortBy,
+          currentLatitude: _shipperLocation?.latitude,
+          currentLongitude: _shipperLocation?.longitude,
+        ),
       );
     }
   }
@@ -73,10 +90,68 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
     }
   }
 
-  void _loadGroups({bool refresh = false}) {
+  bool get _isCompletedTab => _tabController.index == 2;
+
+  bool get _isLocationPreferredSort =>
+      _selectedSortBy == ApiConstants.deliveryGroupSortDistanceFirst ||
+      _selectedSortBy == ApiConstants.deliveryGroupSortBalanced;
+
+  bool get _shouldResolveLocation => _isLocationPreferredSort;
+
+  bool get _effectiveWorkQueueMode => _useWorkQueueMode && !_isCompletedTab;
+
+  Future<void> _loadGroups({bool refresh = false}) async {
+    if (_shouldResolveLocation) {
+      await _resolveShipperLocation();
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    if (_effectiveWorkQueueMode) {
+      context.read<DeliveryBloc>().add(
+        LoadMyWorkQueue(
+          limit: _workQueueLimit,
+          status: _getCurrentStatus(),
+          sortBy: _selectedSortBy,
+          currentLatitude: _shipperLocation?.latitude,
+          currentLongitude: _shipperLocation?.longitude,
+          refresh: refresh,
+        ),
+      );
+      return;
+    }
+
     context.read<DeliveryBloc>().add(
-      LoadMyGroups(status: _getCurrentStatus(), refresh: refresh),
+      LoadMyGroups(
+        status: _getCurrentStatus(),
+        refresh: refresh,
+        sortBy: _selectedSortBy,
+        currentLatitude: _shipperLocation?.latitude,
+        currentLongitude: _shipperLocation?.longitude,
+      ),
     );
+  }
+
+  Future<void> _resolveShipperLocation() async {
+    if (_isResolvingLocation) {
+      return;
+    }
+
+    setState(() {
+      _isResolvingLocation = true;
+    });
+
+    final result = await _shipperLocationService.resolveCurrentLocation();
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _shipperLocation = result.location;
+      _isResolvingLocation = false;
+    });
   }
 
   @override
@@ -110,7 +185,9 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
             IconButton(
               icon: const Icon(Icons.refresh),
               color: AppColors.neutralLight,
-              onPressed: () => _loadGroups(refresh: true),
+              onPressed: () {
+                _loadGroups(refresh: true);
+              },
               tooltip: 'Làm mới',
             ),
           ],
@@ -198,12 +275,21 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
 
     if (state is MyGroupsLoaded) {
       if (state.isEmpty) {
-        return DeliveryEmptyState(
-          icon: Icons.delivery_dining_outlined,
-          title: 'Chưa có đơn hàng nào',
-          subtitle: 'Nhận đơn từ tab "Đơn có sẵn" để bắt đầu',
-          actionLabel: 'Làm mới',
-          onAction: () => _loadGroups(refresh: true),
+        return Column(
+          children: [
+            _buildQueryControls(state),
+            Expanded(
+              child: DeliveryEmptyState(
+                icon: Icons.delivery_dining_outlined,
+                title: 'Chưa có đơn hàng nào',
+                subtitle: 'Nhận đơn từ tab "Đơn có sẵn" để bắt đầu',
+                actionLabel: 'Làm mới',
+                onAction: () {
+                  _loadGroups(refresh: true);
+                },
+              ),
+            ),
+          ],
         );
       }
       return _buildGroupsList(state);
@@ -212,7 +298,9 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
     if (state is DeliveryError) {
       return DeliveryErrorState(
         message: state.message,
-        onRetry: () => _loadGroups(refresh: true),
+        onRetry: () {
+          _loadGroups(refresh: true);
+        },
       );
     }
 
@@ -222,38 +310,164 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
   Widget _buildGroupsList(MyGroupsLoaded state) {
     return RefreshIndicator(
       color: AppColors.headerGradientEnd,
-      onRefresh: () async => _loadGroups(refresh: true),
-      child: ListView.builder(
+      onRefresh: () => _loadGroups(refresh: true),
+      child: ListView(
         controller: _scrollController,
         padding: const EdgeInsets.all(16),
-        itemCount: state.groups.length + (state.isLoadingMore ? 1 : 0),
-        itemBuilder: (context, index) {
-          if (index == state.groups.length) {
-            return const Center(
+        children: [
+          _buildQueryControls(state),
+          const SizedBox(height: 12),
+          ...state.groups.map((group) {
+            return DeliveryGroupCard(
+              group: group,
+              showAcceptButton: false,
+              onTap: () => context.push(
+                Routes.deliveryGroupDetails(group.deliveryGroupId),
+              ),
+              onStart: group.status == DeliveryGroupStatus.assigned
+                  ? () => _handleStartDelivery(group)
+                  : null,
+              onComplete:
+                  group.status == DeliveryGroupStatus.inTransit &&
+                      group.pendingOrders == 0
+                  ? () => _handleCompleteGroup(group)
+                  : null,
+            );
+          }),
+          if (state.isLoadingMore)
+            const Center(
               child: Padding(
                 padding: EdgeInsets.all(16),
                 child: CircularProgressIndicator(color: AppColors.primary),
               ),
-            );
-          }
-
-          final group = state.groups[index];
-          return DeliveryGroupCard(
-            group: group,
-            showAcceptButton: false,
-            onTap: () => context.push(
-              Routes.deliveryGroupDetails(group.deliveryGroupId),
             ),
-            onStart: group.status == DeliveryGroupStatus.assigned
-                ? () => _handleStartDelivery(group)
-                : null,
-            onComplete:
-                group.status == DeliveryGroupStatus.inTransit &&
-                    group.pendingOrders == 0
-                ? () => _handleCompleteGroup(group)
-                : null,
-          );
-        },
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQueryControls(MyGroupsLoaded state) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.cardSurface,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  state.isWorkQueue
+                      ? 'Đang hiển thị work queue ưu tiên'
+                      : 'Đang hiển thị danh sách phân trang',
+                  style: AppTypography.bodyRegular1.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+              if (_isResolvingLocation)
+                const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          DropdownButtonFormField<String>(
+            initialValue: _selectedSortBy,
+            decoration: const InputDecoration(
+              labelText: 'Sắp xếp',
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+            items: const [
+              DropdownMenuItem(
+                value: ApiConstants.deliveryGroupSortBalanced,
+                child: Text('Cân bằng'),
+              ),
+              DropdownMenuItem(
+                value: ApiConstants.deliveryGroupSortTimeFirst,
+                child: Text('Ưu tiên thời gian'),
+              ),
+              DropdownMenuItem(
+                value: ApiConstants.deliveryGroupSortDistanceFirst,
+                child: Text('Ưu tiên khoảng cách'),
+              ),
+            ],
+            onChanged: (value) {
+              if (value == null || value == _selectedSortBy) {
+                return;
+              }
+              setState(() {
+                _selectedSortBy = value;
+              });
+              _loadGroups(refresh: true);
+            },
+          ),
+          const SizedBox(height: 8),
+          SwitchListTile.adaptive(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Chế độ work queue'),
+            subtitle: Text(
+              _isCompletedTab
+                  ? 'Tab Hoàn thành luôn dùng phân trang thông thường'
+                  : 'Bật để lấy top nhóm ưu tiên từ backend',
+            ),
+            value: _useWorkQueueMode,
+            onChanged: (value) {
+              setState(() {
+                _useWorkQueueMode = value;
+              });
+              _loadGroups(refresh: true);
+            },
+          ),
+          if (_effectiveWorkQueueMode) ...[
+            const SizedBox(height: 8),
+            DropdownButtonFormField<int>(
+              initialValue: _workQueueLimit,
+              decoration: const InputDecoration(
+                labelText: 'Giới hạn top N',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+              items: const [
+                DropdownMenuItem(value: 5, child: Text('Top 5')),
+                DropdownMenuItem(value: 10, child: Text('Top 10')),
+                DropdownMenuItem(value: 20, child: Text('Top 20')),
+              ],
+              onChanged: (value) {
+                if (value == null || value == _workQueueLimit) {
+                  return;
+                }
+                setState(() {
+                  _workQueueLimit = value;
+                });
+                _loadGroups(refresh: true);
+              },
+            ),
+          ],
+          if (_shouldResolveLocation)
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: _isResolvingLocation
+                    ? null
+                    : () {
+                        _loadGroups(refresh: true);
+                      },
+                icon: const Icon(Icons.my_location),
+                label: Text(
+                  _shipperLocation == null
+                      ? 'Lấy vị trí hiện tại'
+                      : 'Cập nhật vị trí hiện tại',
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

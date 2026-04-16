@@ -28,6 +28,9 @@ class LoadMyGroups extends DeliveryEvent {
   final int pageSize;
   final String? status;
   final DateTime? deliveryDate;
+  final String? sortBy;
+  final double? currentLatitude;
+  final double? currentLongitude;
   final bool refresh;
 
   const LoadMyGroups({
@@ -35,11 +38,55 @@ class LoadMyGroups extends DeliveryEvent {
     this.pageSize = 10,
     this.status,
     this.deliveryDate,
+    this.sortBy,
+    this.currentLatitude,
+    this.currentLongitude,
     this.refresh = false,
   });
 
   @override
-  List<Object?> get props => [page, pageSize, status, deliveryDate, refresh];
+  List<Object?> get props => [
+    page,
+    pageSize,
+    status,
+    deliveryDate,
+    sortBy,
+    currentLatitude,
+    currentLongitude,
+    refresh,
+  ];
+}
+
+/// Load prioritized delivery work queue (non-paginated top groups)
+class LoadMyWorkQueue extends DeliveryEvent {
+  final int limit;
+  final String? status;
+  final DateTime? deliveryDate;
+  final String? sortBy;
+  final double? currentLatitude;
+  final double? currentLongitude;
+  final bool refresh;
+
+  const LoadMyWorkQueue({
+    this.limit = 10,
+    this.status,
+    this.deliveryDate,
+    this.sortBy,
+    this.currentLatitude,
+    this.currentLongitude,
+    this.refresh = false,
+  });
+
+  @override
+  List<Object?> get props => [
+    limit,
+    status,
+    deliveryDate,
+    sortBy,
+    currentLatitude,
+    currentLongitude,
+    refresh,
+  ];
 }
 
 /// Load delivery group details

@@ -29,6 +29,8 @@ class DeliveryGroupCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final displayDistanceKm = distanceKm ?? group.distanceFromCurrentKm;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -116,15 +118,35 @@ class DeliveryGroupCard extends StatelessWidget {
                                         AppColors.badgePendingBackground,
                                     textColor: AppColors.badgePendingText,
                                   ),
-                                if (distanceKm != null)
+                                if (displayDistanceKm != null)
                                   _Pill(
-                                    text: _distanceLabel(distanceKm!),
+                                    text: _distanceLabel(displayDistanceKm),
                                     background: AppColors.successGradientStart
                                         .withValues(alpha: 0.12),
                                     textColor: AppColors.successGradientEnd,
                                   ),
+                                if (group.priorityScore != null)
+                                  _Pill(
+                                    text:
+                                        'Ưu tiên ${group.priorityScore!.toStringAsFixed(0)}',
+                                    background: AppColors.headerGradientStart
+                                        .withValues(alpha: 0.12),
+                                    textColor: AppColors.headerGradientEnd,
+                                  ),
                               ],
                             ),
+                            if (group.priorityReasons.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                'Lý do: ${group.priorityReasons.take(2).join(', ')}',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.bodyRegular1.copyWith(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -206,7 +228,7 @@ class DeliveryGroupCard extends StatelessWidget {
                       label: 'Bắt đầu giao',
                     ),
                   ],
-
+                  // TODO: Fix the Progress line
                   if (group.isInProgress &&
                       group.pendingOrders == 0 &&
                       onComplete != null) ...[
@@ -371,37 +393,21 @@ class _SuccessGradientButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
+    return AppGradientButton(
+      onPressed: onPressed,
       height: 50,
-      width: double.infinity,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [
-              AppColors.successGradientStart,
-              AppColors.successGradientEnd,
-            ],
-          ),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-          child: InkWell(
-            onTap: onPressed,
-            borderRadius: BorderRadius.circular(20),
-            child: Center(
-              child: Text(
-                label,
-                style: AppTypography.header3.copyWith(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.14,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
+      borderRadius: 20,
+      enabledGradient: const LinearGradient(
+        colors: [AppColors.successGradientStart, AppColors.successGradientEnd],
+      ),
+      enabledBoxShadow: const [],
+      child: Text(
+        label,
+        style: AppTypography.header3.copyWith(
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.14,
+          color: Colors.white,
         ),
       ),
     );

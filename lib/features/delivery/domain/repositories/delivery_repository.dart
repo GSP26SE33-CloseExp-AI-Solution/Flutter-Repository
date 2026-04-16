@@ -23,6 +23,18 @@ abstract class DeliveryRepository {
     int pageSize = 10,
     String? status,
     DateTime? deliveryDate,
+    String? sortBy,
+    double? currentLatitude,
+    double? currentLongitude,
+  });
+
+  Future<Either<Failure, List<DeliveryGroupSummary>>> getMyWorkQueue({
+    int limit = 10,
+    String? status,
+    DateTime? deliveryDate,
+    String? sortBy,
+    double? currentLatitude,
+    double? currentLongitude,
   });
 
   /// Get detailed delivery group by ID

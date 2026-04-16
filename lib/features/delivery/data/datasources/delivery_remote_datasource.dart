@@ -21,6 +21,17 @@ abstract class DeliveryRemoteDataSource {
     int pageSize = 10,
     String? status,
     DateTime? deliveryDate,
+    String? sortBy,
+    double? currentLatitude,
+    double? currentLongitude,
+  });
+  Future<List<DeliveryGroupSummaryModel>> getMyWorkQueue({
+    int limit = 10,
+    String? status,
+    DateTime? deliveryDate,
+    String? sortBy,
+    double? currentLatitude,
+    double? currentLongitude,
   });
   Future<DeliveryGroupModel> getDeliveryGroupById(String groupId);
   Future<DeliveryGroupModel> acceptDeliveryGroup(
@@ -107,6 +118,9 @@ class DeliveryRemoteDataSourceImpl implements DeliveryRemoteDataSource {
     int pageSize = 10,
     String? status,
     DateTime? deliveryDate,
+    String? sortBy,
+    double? currentLatitude,
+    double? currentLongitude,
   }) async {
     try {
       final queryParams = <String, dynamic>{
@@ -118,6 +132,15 @@ class DeliveryRemoteDataSourceImpl implements DeliveryRemoteDataSource {
         queryParams['deliveryDate'] = deliveryDate.toIso8601String().split(
           'T',
         )[0];
+      }
+      if (sortBy != null && sortBy.trim().isNotEmpty) {
+        queryParams['sortBy'] = sortBy.trim();
+      }
+      if (currentLatitude != null) {
+        queryParams['currentLatitude'] = currentLatitude;
+      }
+      if (currentLongitude != null) {
+        queryParams['currentLongitude'] = currentLongitude;
       }
 
       final response = await _dio.get(
@@ -133,6 +156,48 @@ class DeliveryRemoteDataSourceImpl implements DeliveryRemoteDataSource {
       rethrow;
     } catch (e) {
       throw ServerException(message: 'Không thể tải danh sách đơn hàng: $e');
+    }
+  }
+
+  @override
+  Future<List<DeliveryGroupSummaryModel>> getMyWorkQueue({
+    int limit = 10,
+    String? status,
+    DateTime? deliveryDate,
+    String? sortBy,
+    double? currentLatitude,
+    double? currentLongitude,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{'limit': limit};
+      if (status != null) queryParams['status'] = status;
+      if (deliveryDate != null) {
+        queryParams['deliveryDate'] = deliveryDate.toIso8601String().split(
+          'T',
+        )[0];
+      }
+      if (sortBy != null && sortBy.trim().isNotEmpty) {
+        queryParams['sortBy'] = sortBy.trim();
+      }
+      if (currentLatitude != null) {
+        queryParams['currentLatitude'] = currentLatitude;
+      }
+      if (currentLongitude != null) {
+        queryParams['currentLongitude'] = currentLongitude;
+      }
+
+      final response = await _dio.get(
+        ApiConstants.deliveryGroupsMyWorkQueue,
+        queryParameters: queryParams,
+      );
+      return _handleListResponse<DeliveryGroupSummaryModel>(
+        response,
+        DeliveryGroupSummaryModel.fromJson,
+      );
+    } on DioException {
+      rethrow;
+    } catch (e) {
+      throw ServerException(message: 'Không thể tải work queue: $e');
     }
   }
 

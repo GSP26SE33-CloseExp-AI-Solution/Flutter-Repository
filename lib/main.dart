@@ -25,9 +25,16 @@ bool get _isMobileNative =>
     (defaultTargetPlatform == TargetPlatform.android ||
         defaultTargetPlatform == TargetPlatform.iOS);
 
+bool get _enableDevicePreviewOnMobile {
+  return const bool.fromEnvironment(
+    'ENABLE_DEVICE_PREVIEW_ON_MOBILE',
+    defaultValue: false,
+  );
+}
+
 bool get _shouldWrapWithDevicePreview {
   if (kReleaseMode) return false;
-  if (_isMobileNative) return false;
+  if (_isMobileNative) return _enableDevicePreviewOnMobile;
   if (kIsWeb) return true;
   return const bool.fromEnvironment(
     'ENABLE_DEVICE_PREVIEW',
@@ -55,12 +62,7 @@ void main() async {
 
   const app = CloseExpDeliveryApp();
   if (_shouldWrapWithDevicePreview) {
-    runApp(
-      DevicePreview(
-        enabled: !kReleaseMode,
-        builder: (context) => app,
-      ),
-    );
+    runApp(DevicePreview(enabled: !kReleaseMode, builder: (context) => app));
   } else {
     runApp(app);
   }

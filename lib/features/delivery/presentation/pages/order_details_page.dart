@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -36,7 +34,6 @@ class OrderDetailsPage extends StatefulWidget {
 
 class _OrderDetailsPageState extends State<OrderDetailsPage> {
   final _imagePicker = ImagePicker();
-  String? _selectedProofImagePath;
 
   @override
   void initState() {
@@ -603,15 +600,6 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
               label: 'Giao hàng thất bại',
               foregroundColor: AppColors.headerGradientEnd,
             ),
-            const SizedBox(height: 12),
-
-            // Manual confirm — outlined, accent color
-            AppDeliveryOutlinedButton(
-              onPressed: () => _showConfirmDialog(order),
-              icon: Icons.check_circle_outline,
-              label: 'Xác nhận đã giao (không QR)',
-              foregroundColor: AppColors.accent,
-            ),
           ],
         ],
       ),
@@ -711,133 +699,6 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
         ),
       );
     }
-  }
-
-  void _showConfirmDialog(DeliveryOrder order) {
-    String? localSelectedPath = _selectedProofImagePath;
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text('Xác nhận giao hàng', style: AppTypography.header2),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Xác nhận đã giao thành công đơn "${order.orderCode}" cho ${order.customerName}?',
-                  style: AppTypography.header3,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Ảnh bằng chứng (bắt buộc — BE proof-image + confirm-delivery)',
-                  style: AppTypography.header3.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        localSelectedPath == null
-                            ? 'Chưa chọn ảnh'
-                            : File(localSelectedPath!).path.split('/').last,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTypography.bodyRegular1.copyWith(
-                          fontSize: 13,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    OutlinedButton.icon(
-                      onPressed: () async {
-                        final picked = await _imagePicker.pickImage(
-                          source: ImageSource.gallery,
-                          imageQuality: 85,
-                        );
-                        if (picked != null) {
-                          setDialogState(() => localSelectedPath = picked.path);
-                        }
-                      },
-                      icon: const Icon(Icons.photo_library),
-                      label: const Text('Chọn'),
-                    ),
-                    if (localSelectedPath != null) ...[
-                      const SizedBox(width: 8),
-                      IconButton(
-                        tooltip: 'Bỏ chọn',
-                        onPressed: () =>
-                            setDialogState(() => localSelectedPath = null),
-                        icon: const Icon(Icons.close),
-                        color: AppColors.error,
-                      ),
-                    ],
-                  ],
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(
-                'Hủy',
-                style: AppTypography.subHeader.copyWith(
-                  color: AppColors.neutralMid,
-                ),
-              ),
-            ),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [
-                    AppColors.successGradientStart,
-                    AppColors.successGradientEnd,
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: TextButton(
-                onPressed: () {
-                  if (localSelectedPath == null || localSelectedPath!.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Vui lòng chọn ảnh chứng minh — API bắt buộc proofImageUrl.',
-                        ),
-                        backgroundColor: AppColors.error,
-                      ),
-                    );
-                    return;
-                  }
-                  Navigator.pop(context);
-                  _selectedProofImagePath = localSelectedPath;
-                  context.read<DeliveryBloc>().add(
-                    ConfirmDelivery(
-                      orderId: order.orderId,
-                      deliveryGroupId: order.deliveryGroupId,
-                      proofImagePath: localSelectedPath,
-                      verificationCode: order.orderCode.trim(),
-                    ),
-                  );
-                },
-                child: Text(
-                  'Xác nhận',
-                  style: AppTypography.subHeader.copyWith(
-                    color: Colors.white,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   static String _normalizeForVerify(String x) =>

@@ -4,7 +4,6 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:geolocator/geolocator.dart' as geo;
 import 'package:go_router/go_router.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 
@@ -20,6 +19,7 @@ import '../../domain/entities/delivery_group.dart';
 import '../../domain/entities/delivery_order.dart';
 import '../../domain/entities/delivery_route_plan.dart';
 import '../../domain/repositories/delivery_repository.dart';
+import '../../domain/services/shipper_location_service.dart';
 import '../bloc/delivery_bloc.dart';
 import '../bloc/delivery_event.dart';
 import '../bloc/delivery_state.dart';
@@ -37,6 +37,8 @@ class DeliveryRouteMapPage extends StatefulWidget {
 
 class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
   final DeliveryRepository _repository = sl<DeliveryRepository>();
+  final ShipperLocationService _shipperLocationService =
+      sl<ShipperLocationService>();
 
   static const bool _useMockRoute = bool.fromEnvironment(
     'USE_MOCK_ROUTE',
@@ -78,8 +80,13 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
   bool _didTryFallbackStyle = false;
   Timer? _mapHealthTimer;
   ({double latitude, double longitude})? _currentShipperLocation;
+  ({double latitude, double longitude})? _lastComputedRouteStartLocation;
   String? _shipperLocationFallbackReason;
   bool _resolvingShipperLocation = false;
+  DateTime? _lastManualRefreshAt;
+
+  static const Duration _manualRefreshCooldown = Duration(seconds: 2);
+  static const double _recomputeDistanceThresholdMeters = 50;
 
   static const ({double latitude, double longitude}) _fallbackShipperLocation =
       (latitude: 10.776889, longitude: 106.700806);
@@ -227,7 +234,9 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
     );
   }
 
-  Future<void> _fetchRoutePlanOnly() async {
+  Future<void> _fetchRoutePlanOnly({
+    ({double latitude, double longitude})? forcedStartLocation,
+  }) async {
     if (_useMockRoute) {
       if (!mounted) return;
       setState(() {
@@ -241,7 +250,8 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
 
     if (!_hasValidGroupId) return;
     final gid = widget.groupId!.trim();
-    final shipperStart = await _resolveShipperStartLocation();
+    final shipperStart =
+        forcedStartLocation ?? await _resolveShipperStartLocation();
     setState(() {
       _loading = true;
       _loadError = null;
@@ -270,6 +280,7 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
           _loading = false;
           _plan = plan;
           _loadError = null;
+          _lastComputedRouteStartLocation = shipperStart;
         });
         _requestMapAnnotationRefresh();
       },
@@ -795,6 +806,15 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
       return fallback;
     }
 
+    final result = await _resolveShipperLocationResult();
+    if (result.hasLocation) {
+      return result.location!;
+    }
+
+    return _setFallbackShipperLocation(_fallbackReasonByStatus(result.status));
+  }
+
+  Future<ShipperLocationResult> _resolveShipperLocationResult() async {
     if (mounted) {
       setState(() {
         _resolvingShipperLocation = true;
@@ -802,42 +822,38 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
     }
 
     try {
-      final serviceEnabled = await geo.Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        return _setFallbackShipperLocation(
-          'GPS đang tắt, đã chuyển sang vị trí dự phòng.',
-        );
+      final result = await _shipperLocationService.resolveCurrentLocation();
+      if (result.hasLocation) {
+        final real = result.location!;
+        if (mounted) {
+          setState(() {
+            _currentShipperLocation = real;
+            _shipperLocationFallbackReason = null;
+          });
+        }
+        return result;
       }
 
-      var permission = await geo.Geolocator.checkPermission();
-      if (permission == geo.LocationPermission.denied) {
-        permission = await geo.Geolocator.requestPermission();
+      if (mounted) {
+        setState(() {
+          _shipperLocationFallbackReason = _fallbackReasonByStatus(
+            result.status,
+          );
+        });
       }
-
-      if (permission == geo.LocationPermission.denied ||
-          permission == geo.LocationPermission.deniedForever) {
-        return _setFallbackShipperLocation(
-          'Chưa có quyền vị trí, đã chuyển sang vị trí dự phòng.',
-        );
-      }
-
-      final position = await geo.Geolocator.getCurrentPosition(
-        locationSettings: const geo.LocationSettings(
-          accuracy: geo.LocationAccuracy.high,
-          timeLimit: Duration(seconds: 8),
-        ),
-      );
-      final real = (latitude: position.latitude, longitude: position.longitude);
-      if (!mounted) return real;
-      setState(() {
-        _currentShipperLocation = real;
-        _shipperLocationFallbackReason = null;
-      });
-      return real;
+      return result;
     } catch (_) {
-      return _setFallbackShipperLocation(
-        'Không lấy được GPS hiện tại, đã chuyển sang vị trí dự phòng.',
+      const fallbackResult = ShipperLocationResult(
+        status: ShipperLocationStatus.failed,
       );
+      if (mounted) {
+        setState(() {
+          _shipperLocationFallbackReason = _fallbackReasonByStatus(
+            fallbackResult.status,
+          );
+        });
+      }
+      return fallbackResult;
     } finally {
       if (mounted) {
         setState(() {
@@ -845,6 +861,125 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
         });
       }
     }
+  }
+
+  String _fallbackReasonByStatus(ShipperLocationStatus status) {
+    switch (status) {
+      case ShipperLocationStatus.serviceDisabled:
+        return 'GPS đang tắt, đã chuyển sang vị trí dự phòng.';
+      case ShipperLocationStatus.denied:
+        return 'Chưa có quyền vị trí, đã chuyển sang vị trí dự phòng.';
+      case ShipperLocationStatus.deniedForever:
+        return 'Quyền vị trí đã bị từ chối vĩnh viễn, đang dùng vị trí dự phòng.';
+      case ShipperLocationStatus.failed:
+        return 'Không lấy được GPS hiện tại, đã chuyển sang vị trí dự phòng.';
+      case ShipperLocationStatus.success:
+        return 'Đang dùng vị trí hiện tại của shipper.';
+    }
+  }
+
+  double _distanceMeters(
+    ({double latitude, double longitude}) a,
+    ({double latitude, double longitude}) b,
+  ) {
+    const earthRadiusMeters = 6371000.0;
+    final dLat = _toRadians(b.latitude - a.latitude);
+    final dLon = _toRadians(b.longitude - a.longitude);
+    final lat1 = _toRadians(a.latitude);
+    final lat2 = _toRadians(b.latitude);
+
+    final h =
+        math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(lat1) *
+            math.cos(lat2) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
+
+    return 2 * earthRadiusMeters * math.asin(math.sqrt(h));
+  }
+
+  double _toRadians(double degree) => degree * math.pi / 180.0;
+
+  Future<void> _showLocationPermissionForeverDialog() async {
+    if (!mounted) return;
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Quyền vị trí bị từ chối vĩnh viễn'),
+          content: const Text(
+            'Ứng dụng không thể hiện lại popup cấp quyền vị trí trên thiết bị này. Bạn cần tự bật lại quyền vị trí trong phần cài đặt hệ thống khi thuận tiện.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Đã hiểu'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showInfoSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
+    );
+  }
+
+  Future<void> _refreshShipperLocation() async {
+    if (_loading || _resolvingShipperLocation || !_hasValidGroupId) {
+      return;
+    }
+
+    final now = DateTime.now();
+    final lastRefresh = _lastManualRefreshAt;
+    if (lastRefresh != null) {
+      final elapsed = now.difference(lastRefresh);
+      if (elapsed < _manualRefreshCooldown) {
+        final secondsLeft = (_manualRefreshCooldown - elapsed).inSeconds.clamp(
+          1,
+          999,
+        );
+        _showInfoSnackBar(
+          'Vui lòng thử lại sau $secondsLeft giây để tránh làm mới quá nhanh.',
+        );
+        return;
+      }
+    }
+
+    _lastManualRefreshAt = now;
+
+    final resolvedResult = await _resolveShipperLocationResult();
+    if (!resolvedResult.hasLocation) {
+      final reason = _fallbackReasonByStatus(resolvedResult.status);
+      _setFallbackShipperLocation(reason);
+
+      if (resolvedResult.status == ShipperLocationStatus.deniedForever) {
+        await _showLocationPermissionForeverDialog();
+      } else {
+        _showInfoSnackBar(reason);
+      }
+      _requestMapAnnotationRefresh();
+      return;
+    }
+
+    final currentStart = resolvedResult.location!;
+    final previousStart = _lastComputedRouteStartLocation;
+    if (previousStart != null) {
+      final movedMeters = _distanceMeters(previousStart, currentStart);
+      if (movedMeters < _recomputeDistanceThresholdMeters) {
+        _showInfoSnackBar(
+          'Shipper chỉ di chuyển ${movedMeters.toStringAsFixed(0)}m, chưa cần tính lại lộ trình.',
+        );
+        _requestMapAnnotationRefresh();
+        return;
+      }
+    }
+
+    await _fetchRoutePlanOnly(forcedStartLocation: currentStart);
   }
 
   ({double latitude, double longitude}) _setFallbackShipperLocation(
@@ -1135,6 +1270,28 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
                               color: AppColors.textPrimary,
                             ),
                           ),
+                        ),
+                        IconButton(
+                          visualDensity: VisualDensity.compact,
+                          tooltip: 'Làm mới vị trí shipper',
+                          onPressed:
+                              (!_hasValidGroupId ||
+                                  _loading ||
+                                  _resolvingShipperLocation)
+                              ? null
+                              : _refreshShipperLocation,
+                          icon: _resolvingShipperLocation
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons.my_location,
+                                  color: AppColors.textSecondary,
+                                ),
                         ),
                         IconButton(
                           visualDensity: VisualDensity.compact,

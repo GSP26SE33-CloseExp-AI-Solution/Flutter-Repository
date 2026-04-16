@@ -14,9 +14,11 @@ import '../features/auth/presentation/bloc/auth_bloc.dart';
 import '../features/delivery/data/datasources/delivery_remote_datasource.dart';
 import '../features/delivery/data/datasources/upload_datasource.dart';
 import '../features/delivery/data/repositories/delivery_repository_impl.dart';
+import '../features/delivery/data/services/shipper_location_service_impl.dart';
 import '../features/delivery/data/repositories/upload_repository_impl.dart';
 import '../features/delivery/domain/repositories/delivery_repository.dart';
 import '../features/delivery/domain/repositories/upload_repository.dart';
+import '../features/delivery/domain/services/shipper_location_service.dart';
 import '../features/delivery/domain/usecases/upload_proof_image_usecase.dart';
 import '../features/delivery/presentation/bloc/delivery_bloc.dart';
 
@@ -91,6 +93,10 @@ Future<void> initializeDependencies() async {
 
   sl.registerLazySingleton<UploadDataSource>(
     () => UploadDataSourceImpl(dio: sl<DioClient>().dio),
+  );
+
+  sl.registerLazySingleton<ShipperLocationService>(
+    () => ShipperLocationServiceImpl(),
   );
 
   // Repository

@@ -77,6 +77,7 @@ class MyGroupsLoaded extends DeliveryState {
   final int totalCount;
   final bool hasNextPage;
   final bool isLoadingMore;
+  final bool isWorkQueue;
 
   const MyGroupsLoaded({
     required this.groups,
@@ -85,6 +86,7 @@ class MyGroupsLoaded extends DeliveryState {
     required this.totalCount,
     required this.hasNextPage,
     this.isLoadingMore = false,
+    this.isWorkQueue = false,
   });
 
   bool get isEmpty => groups.isEmpty;
@@ -97,6 +99,7 @@ class MyGroupsLoaded extends DeliveryState {
     int? totalCount,
     bool? hasNextPage,
     bool? isLoadingMore,
+    bool? isWorkQueue,
   }) {
     return MyGroupsLoaded(
       groups: groups ?? this.groups,
@@ -105,6 +108,7 @@ class MyGroupsLoaded extends DeliveryState {
       totalCount: totalCount ?? this.totalCount,
       hasNextPage: hasNextPage ?? this.hasNextPage,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      isWorkQueue: isWorkQueue ?? this.isWorkQueue,
     );
   }
 
@@ -116,6 +120,7 @@ class MyGroupsLoaded extends DeliveryState {
     totalCount,
     hasNextPage,
     isLoadingMore,
+    isWorkQueue,
   ];
 }
 

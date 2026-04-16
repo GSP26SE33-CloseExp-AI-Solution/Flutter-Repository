@@ -54,6 +54,9 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
     int pageSize = 10,
     String? status,
     DateTime? deliveryDate,
+    String? sortBy,
+    double? currentLatitude,
+    double? currentLongitude,
   }) async {
     if (!await networkInfo.isConnected) {
       return const Left(NetworkFailure());
@@ -65,6 +68,9 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
         pageSize: pageSize,
         status: status,
         deliveryDate: deliveryDate,
+        sortBy: sortBy,
+        currentLatitude: currentLatitude,
+        currentLongitude: currentLongitude,
       );
       return Right(
         PaginatedDeliveryGroups(
@@ -75,6 +81,42 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
           hasNextPage: response.hasNextPage,
         ),
       );
+    } on UnauthorizedException {
+      return const Left(UnauthorizedFailure());
+    } on ForbiddenException {
+      return const Left(ForbiddenFailure());
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message, statusCode: e.statusCode));
+    } on NetworkException {
+      return const Left(NetworkFailure());
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<DeliveryGroupSummary>>> getMyWorkQueue({
+    int limit = 10,
+    String? status,
+    DateTime? deliveryDate,
+    String? sortBy,
+    double? currentLatitude,
+    double? currentLongitude,
+  }) async {
+    if (!await networkInfo.isConnected) {
+      return const Left(NetworkFailure());
+    }
+
+    try {
+      final groups = await remoteDataSource.getMyWorkQueue(
+        limit: limit,
+        status: status,
+        deliveryDate: deliveryDate,
+        sortBy: sortBy,
+        currentLatitude: currentLatitude,
+        currentLongitude: currentLongitude,
+      );
+      return Right(groups);
     } on UnauthorizedException {
       return const Left(UnauthorizedFailure());
     } on ForbiddenException {
