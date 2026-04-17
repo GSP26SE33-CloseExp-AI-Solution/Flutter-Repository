@@ -227,8 +227,8 @@ class DeliveryGroupCard extends StatelessWidget {
                       onPressed: onStart!,
                       label: 'Bắt đầu giao',
                     ),
-                  ],
-                  // TODO: Fix the Progress line
+                  ],  
+                  // FIXME: Fix the Progress line
                   if (group.isInProgress &&
                       group.pendingOrders == 0 &&
                       onComplete != null) ...[

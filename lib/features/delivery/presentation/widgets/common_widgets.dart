@@ -410,65 +410,74 @@ class DeliveryEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 80, color: AppColors.neutralMid),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            style: AppTypography.subHeader.copyWith(
-              color: AppColors.neutralMid,
-            ),
-          ),
-          if (subtitle != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              subtitle!,
-              style: AppTypography.header3.copyWith(
-                color: AppColors.neutralMid,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-          if (actionLabel != null && onAction != null) ...[
-            const SizedBox(height: 40),
-            Padding(
-              padding: EdgeInsets.symmetric(
-                // Responsive horizontal spacing: nhỏ màn -> padding nhỏ hơn,
-                // lớn màn -> không bị sát mép, nhưng vẫn không quá rộng.
-                horizontal: (MediaQuery.sizeOf(context).width * 0.06).clamp(
-                  16.0,
-                  32.0,
-                ),
-              ),
-              child: AppGradientButton(
-                onPressed: onAction,
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: Center(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.refresh, color: AppColors.neutralLight),
-                        const SizedBox(width: 8),
-                        Text(
-                          actionLabel!,
-                          style: AppTypography.subHeader.copyWith(
-                            color: AppColors.neutralLight,
-                          ),
-                        ),
-                      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight - 32),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 80, color: AppColors.neutralMid),
+                  const SizedBox(height: 16),
+                  Text(
+                    title,
+                    style: AppTypography.subHeader.copyWith(
+                      color: AppColors.neutralMid,
                     ),
                   ),
-                ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      subtitle!,
+                      style: AppTypography.header3.copyWith(
+                        color: AppColors.neutralMid,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                  if (actionLabel != null && onAction != null) ...[
+                    const SizedBox(height: 40),
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: (MediaQuery.sizeOf(context).width * 0.06)
+                            .clamp(16.0, 32.0),
+                      ),
+                      child: AppGradientButton(
+                        onPressed: onAction,
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: Center(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.refresh,
+                                  color: AppColors.neutralLight,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  actionLabel!,
+                                  style: AppTypography.subHeader.copyWith(
+                                    color: AppColors.neutralLight,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
-          ],
-        ],
-      ),
+          ),
+        );
+      },
     );
   }
 }
