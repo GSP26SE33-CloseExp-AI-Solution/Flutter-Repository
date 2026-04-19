@@ -34,7 +34,8 @@ class ApiConstants {
       // Real Device IP address by ethernet cable
       // return 'http://10.159.160.29:5014/api'; // LibraryIP School
       // return 'http://172.31.177.220:5014/api'; // Physical device USB
-      return 'http://10.0.2.2:5014/api'; // Android Emulator
+      // return 'http://10.0.2.2:5014/api'; // Android Emulator
+      return 'https://g9z03vx4-5014.asse.devtunnels.ms/api';
     }
     // For iOS
     if (Platform.isIOS) {

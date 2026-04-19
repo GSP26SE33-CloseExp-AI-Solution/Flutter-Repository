@@ -7,6 +7,7 @@ import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../domain/entities/delivery_group.dart';
+import '../../domain/entities/delivery_order.dart';
 import '../bloc/delivery_bloc.dart';
 import '../bloc/delivery_event.dart';
 import '../bloc/delivery_state.dart';
@@ -192,6 +193,8 @@ class _GroupDetailsContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final pendingItemCount = _countPendingGroupItems();
+
     return RefreshIndicator(
       color: AppColors.headerGradientEnd,
       onRefresh: () async => onRefresh(),
@@ -202,6 +205,10 @@ class _GroupDetailsContent extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildGroupInfoCard(),
+            if (pendingItemCount > 0) ...[
+              const SizedBox(height: 12),
+              _buildPendingItemsBanner(pendingItemCount),
+            ],
             const SizedBox(height: 16),
             _buildActionButtons(context),
             const SizedBox(height: 24),
@@ -321,6 +328,8 @@ class _GroupDetailsContent extends StatelessWidget {
   }
 
   Widget _buildActionButtons(BuildContext context) {
+    final allGroupItemsDone = _areAllGroupItemsTerminal();
+
     return Column(
       children: [
         if (group.status == DeliveryGroupStatus.assigned ||
@@ -363,7 +372,7 @@ class _GroupDetailsContent extends StatelessWidget {
           ),
 
         if (group.status == DeliveryGroupStatus.inTransit &&
-            group.allOrdersDone) ...[
+            allGroupItemsDone) ...[
           if (group.status == DeliveryGroupStatus.assigned)
             const SizedBox(height: 12),
           _SuccessButton(
@@ -377,6 +386,8 @@ class _GroupDetailsContent extends StatelessWidget {
   }
 
   Widget _buildOrdersSection(BuildContext context) {
+    final sortedOrders = _sortedOrdersByPendingItemsDesc();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -384,7 +395,7 @@ class _GroupDetailsContent extends StatelessWidget {
           title: 'Danh sách đơn hàng (${group.orders.length})',
         ),
         const SizedBox(height: 12),
-        if (group.orders.isEmpty)
+        if (sortedOrders.isEmpty)
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(32),
@@ -402,19 +413,119 @@ class _GroupDetailsContent extends StatelessWidget {
             ),
           )
         else
-          ...group.orders.map(
-            (order) => DeliveryOrderCard(
-              order: order,
-              onTap: () => context.push(
-                Routes.deliveryOrderDetails(
-                  order.orderId,
-                  groupId: group.deliveryGroupId,
+          ...sortedOrders.map((order) {
+            final pendingItems = _countPendingGroupItemsForOrder(order);
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (pendingItems > 0)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                    child: Text(
+                      'Còn $pendingItems item chưa giao trong nhóm này',
+                      style: AppTypography.bodyRegular1.copyWith(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.headerGradientEnd,
+                      ),
+                    ),
+                  ),
+                DeliveryOrderCard(
+                  order: order,
+                  onTap: () => context.push(
+                    Routes.deliveryOrderDetails(
+                      order.orderId,
+                      groupId: group.deliveryGroupId,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          ),
+              ],
+            );
+          }),
       ],
     );
+  }
+
+  Widget _buildPendingItemsBanner(int pendingItemCount) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.routeOptionActiveBackground,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.cardBorder),
+      ),
+      child: Text(
+        'Nhóm này còn $pendingItemCount item chưa giao.',
+        style: AppTypography.bodyRegular1.copyWith(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: AppColors.textPrimary,
+        ),
+      ),
+    );
+  }
+
+  int _countPendingGroupItems() {
+    final groupItems = _groupItems();
+    if (groupItems.isEmpty) {
+      return 0;
+    }
+    return groupItems.where((item) => !_isTerminalGroupItem(item)).length;
+  }
+
+  bool _areAllGroupItemsTerminal() {
+    final groupItems = _groupItems();
+    if (groupItems.isEmpty) {
+      // Backward-compatible fallback when item-level payload is unavailable.
+      return group.allOrdersDone;
+    }
+    return groupItems.every(_isTerminalGroupItem);
+  }
+
+  List<DeliveryOrderItem> _groupItems() {
+    return group.orders
+        .expand((order) => order.items)
+        .where((item) => _isItemBelongsToGroup(item, group.deliveryGroupId))
+        .where((item) => item.isPackagingCompleted)
+        .toList();
+  }
+
+  List<DeliveryOrder> _sortedOrdersByPendingItemsDesc() {
+    final sorted = List<DeliveryOrder>.from(group.orders);
+    sorted.sort((a, b) {
+      final bPending = _countPendingGroupItemsForOrder(b);
+      final aPending = _countPendingGroupItemsForOrder(a);
+      return bPending.compareTo(aPending);
+    });
+    return sorted;
+  }
+
+  int _countPendingGroupItemsForOrder(DeliveryOrder order) {
+    return order.items
+        .where((item) => _isItemBelongsToGroup(item, group.deliveryGroupId))
+        .where((item) => item.isPackagingCompleted)
+        .where((item) => !_isTerminalGroupItem(item))
+        .length;
+  }
+
+  bool _isItemBelongsToGroup(DeliveryOrderItem item, String groupId) {
+    final itemGroupId = item.deliveryGroupId?.trim();
+    if (itemGroupId == null || itemGroupId.isEmpty) {
+      return false;
+    }
+    return itemGroupId.toLowerCase() == groupId.trim().toLowerCase();
+  }
+
+  bool _isTerminalGroupItem(DeliveryOrderItem item) {
+    final status = _normalizeItemDeliveryStatus(item.deliveryStatus);
+    return status == 'completed' ||
+        status == 'failed' ||
+        status == 'deliveredwaitconfirm';
+  }
+
+  String _normalizeItemDeliveryStatus(String? status) {
+    return (status ?? '').trim().toLowerCase().replaceAll('_', '');
   }
 }
 

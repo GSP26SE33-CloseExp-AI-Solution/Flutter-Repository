@@ -12,9 +12,11 @@ import 'package:go_router/go_router.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:device_preview/device_preview.dart';
 import 'core/constants/mapbox_config.dart';
+import 'core/network/dio_client.dart';
 import 'core/theme/app_theme.dart';
 import 'core/router/app_router.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
+import 'features/auth/presentation/bloc/auth_event.dart';
 import 'injection_container.dart';
 
 /// DevicePreview wraps the app in ClipRRect / animated layout that breaks Mapbox
@@ -79,16 +81,33 @@ class CloseExpDeliveryApp extends StatefulWidget {
 class _CloseExpDeliveryAppState extends State<CloseExpDeliveryApp> {
   late final AuthBloc _authBloc;
   late final GoRouter router;
+  int _lastInvalidationTick = 0;
 
   @override
   void initState() {
     super.initState();
     _authBloc = sl<AuthBloc>();
     router = AppRouter.createRouter(_authBloc);
+    DioClient.authSessionInvalidated.addListener(_onSessionInvalidated);
+  }
+
+  void _onSessionInvalidated() {
+    final tick = DioClient.authSessionInvalidated.value;
+    if (tick == _lastInvalidationTick) {
+      return;
+    }
+
+    _lastInvalidationTick = tick;
+    if (!mounted) {
+      return;
+    }
+
+    _authBloc.add(const SessionExpiredEvent());
   }
 
   @override
   void dispose() {
+    DioClient.authSessionInvalidated.removeListener(_onSessionInvalidated);
     _authBloc.close();
     super.dispose();
   }

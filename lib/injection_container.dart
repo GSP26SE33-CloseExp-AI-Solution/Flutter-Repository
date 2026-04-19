@@ -10,6 +10,7 @@ import '../features/auth/domain/usecases/check_auth_status_usecase.dart';
 import '../features/auth/domain/usecases/get_cached_user_usecase.dart';
 import '../features/auth/domain/usecases/login_usecase.dart';
 import '../features/auth/domain/usecases/logout_usecase.dart';
+import '../features/auth/domain/usecases/refresh_token_usecase.dart';
 import '../features/auth/presentation/bloc/auth_bloc.dart';
 import '../features/delivery/data/datasources/delivery_remote_datasource.dart';
 import '../features/delivery/data/datasources/upload_datasource.dart';
@@ -71,6 +72,7 @@ Future<void> initializeDependencies() async {
   // Use Cases
   sl.registerLazySingleton(() => LoginUseCase(sl()));
   sl.registerLazySingleton(() => LogoutUseCase(sl()));
+  sl.registerLazySingleton(() => RefreshTokenUseCase(sl()));
   sl.registerLazySingleton(() => CheckAuthStatusUseCase(sl()));
   sl.registerLazySingleton(() => GetCachedUserUseCase(sl()));
 
@@ -79,6 +81,7 @@ Future<void> initializeDependencies() async {
     () => AuthBloc(
       loginUseCase: sl(),
       logoutUseCase: sl(),
+      refreshTokenUseCase: sl(),
       checkAuthStatusUseCase: sl(),
       getCachedUserUseCase: sl(),
     ),

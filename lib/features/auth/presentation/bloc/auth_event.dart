@@ -30,3 +30,8 @@ class LoginEvent extends AuthEvent {
 class LogoutEvent extends AuthEvent {
   const LogoutEvent();
 }
+
+/// Triggered when interceptor detects unrecoverable auth session expiration.
+class SessionExpiredEvent extends AuthEvent {
+  const SessionExpiredEvent();
+}

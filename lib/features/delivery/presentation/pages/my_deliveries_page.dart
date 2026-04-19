@@ -327,9 +327,7 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
               onStart: group.status == DeliveryGroupStatus.assigned
                   ? () => _handleStartDelivery(group)
                   : null,
-              onComplete:
-                  group.status == DeliveryGroupStatus.inTransit &&
-                      group.pendingOrders == 0
+              onComplete: group.status == DeliveryGroupStatus.inTransit
                   ? () => _handleCompleteGroup(group)
                   : null,
             );
@@ -498,7 +496,8 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
       title: 'Hoàn thành nhóm giao',
       content:
           'Xác nhận hoàn thành nhóm giao "${group.groupCode}"?\n\n'
-          '• Đã giao: ${group.completedOrders}/${group.totalOrders}',
+          '• Đã giao: ${group.completedOrders}/${group.totalOrders}\n'
+          '• Hệ thống sẽ kiểm tra item chưa giao trước khi chốt nhóm.',
       confirmLabel: 'Hoàn thành',
     );
     if (confirmed == true && mounted) {

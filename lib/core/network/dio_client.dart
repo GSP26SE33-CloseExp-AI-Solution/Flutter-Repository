@@ -8,6 +8,12 @@ import '../constants/app_constants.dart';
 import '../error/exceptions.dart';
 
 class DioClient {
+  // Incremented when refresh flow fails and local auth data is cleared.
+  // UI layer can listen and force auth state to unauthenticated.
+  static final ValueNotifier<int> authSessionInvalidated = ValueNotifier<int>(
+    0,
+  );
+
   late final Dio _dio;
   final FlutterSecureStorage _secureStorage;
   bool _isRefreshing = false;
@@ -131,6 +137,7 @@ class DioClient {
 
       // Clear tokens on refresh failure
       await _secureStorage.deleteAll();
+      authSessionInvalidated.value++;
       rethrow;
     } finally {
       _isRefreshing = false;

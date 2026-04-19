@@ -47,11 +47,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
 
   String? _findNextActionableOrderId(DeliveryGroup group) {
     for (final order in group.orders) {
-      if (!order.isCompleted &&
-          !order.isFailed &&
-          order.status != DeliveryOrderStatus.deliveredWaitConfirm &&
-          order.status != DeliveryOrderStatus.canceled &&
-          order.status != DeliveryOrderStatus.refunded) {
+      if (_hasActionableItemsForCurrentGroup(order)) {
         return order.orderId;
       }
     }
@@ -164,6 +160,10 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
   }
 
   Widget _buildOrderDetails(DeliveryOrder order) {
+    final canProcessCurrentGroupItems = _hasActionableItemsForCurrentGroup(
+      order,
+    );
+
     final currencyFormat = NumberFormat.currency(
       locale: 'vi_VN',
       symbol: '₫',
@@ -584,7 +584,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
           const SizedBox(height: 24),
 
           // ── Action buttons ────────────────────────────────────────────────
-          if (order.canConfirm) ...[
+          if (canProcessCurrentGroupItems) ...[
             // QR confirm — success gradient per spec
             _SuccessGradientButton(
               onPressed: () => _openQrScan(order),
@@ -718,7 +718,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
   }
 
   List<String> _collectEligibleFailureOrderItemIds(DeliveryOrder order) {
-    final groupId = order.deliveryGroupId?.trim().toLowerCase();
+    final groupId = _resolveCurrentGroupIdForItems(order);
     return order.items
         .where((item) {
           final itemGroupId = item.deliveryGroupId?.trim().toLowerCase();
@@ -731,6 +731,63 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
         .map((item) => item.orderItemId.trim())
         .where((id) => id.isNotEmpty)
         .toList(growable: false);
+  }
+
+  bool _hasActionableItemsForCurrentGroup(DeliveryOrder order) {
+    final groupId = _resolveCurrentGroupIdForItems(order);
+
+    if (order.items.isNotEmpty) {
+      return order.items.any(
+        (item) =>
+            _isItemBelongsToGroup(item, groupId) &&
+            item.isPackagingCompleted &&
+            !_isTerminalGroupItem(item),
+      );
+    }
+
+    // Backward-compatible fallback when item-level payload is unavailable.
+    return !order.isCompleted &&
+        !order.isFailed &&
+        order.status != DeliveryOrderStatus.deliveredWaitConfirm &&
+        order.status != DeliveryOrderStatus.canceled &&
+        order.status != DeliveryOrderStatus.refunded;
+  }
+
+  String? _resolveCurrentGroupIdForItems(DeliveryOrder order) {
+    final routeGroupId = widget.groupId?.trim().toLowerCase();
+    if (routeGroupId != null && routeGroupId.isNotEmpty) {
+      return routeGroupId;
+    }
+
+    final orderGroupId = order.deliveryGroupId?.trim().toLowerCase();
+    if (orderGroupId != null && orderGroupId.isNotEmpty) {
+      return orderGroupId;
+    }
+
+    return null;
+  }
+
+  bool _isItemBelongsToGroup(DeliveryOrderItem item, String? groupId) {
+    if (groupId == null || groupId.isEmpty) {
+      return true;
+    }
+
+    final itemGroupId = item.deliveryGroupId?.trim().toLowerCase();
+    if (itemGroupId == null || itemGroupId.isEmpty) {
+      return false;
+    }
+    return itemGroupId == groupId;
+  }
+
+  bool _isTerminalGroupItem(DeliveryOrderItem item) {
+    final status = (item.deliveryStatus ?? '').trim().toLowerCase().replaceAll(
+      '_',
+      '',
+    );
+
+    return status == 'completed' ||
+        status == 'failed' ||
+        status == 'deliveredwaitconfirm';
   }
 
   Future<void> _openQrScan(DeliveryOrder order) async {

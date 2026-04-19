@@ -1117,6 +1117,13 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
   @override
   Widget build(BuildContext context) {
     final plan = _plan;
+    final actionableRouteOrderIds = _resolveActionableRouteOrderIds();
+    final routeOrderIdsForDisplay =
+        (plan != null && plan.orderedOrderIds.isNotEmpty)
+        ? plan.orderedOrderIds
+        : actionableRouteOrderIds;
+    final hasRoutePlanData = routeOrderIdsForDisplay.isNotEmpty;
+    final hasActionableStops = actionableRouteOrderIds.isNotEmpty;
     final distanceSubtitle = plan != null && plan.metric == 'distance'
         ? plan.summaryLabel
         : (plan != null
@@ -1349,10 +1356,12 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
                           ),
                         ),
                     ],
-                    if (_plan != null && _plan!.orderedOrderIds.isNotEmpty) ...[
+                    if (hasRoutePlanData) ...[
                       const SizedBox(height: 6),
                       Text(
-                        'Điểm tiếp theo: ${_resolveOrderAddressLabel(_plan!.orderedOrderIds.first)}',
+                        hasActionableStops
+                            ? 'Điểm tiếp theo: ${_resolveOrderAddressLabel(actionableRouteOrderIds.first)}'
+                            : 'Lộ trình đã tối ưu xong (không còn item cần giao)',
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: AppTypography.bodyRegular1.copyWith(
@@ -1407,9 +1416,7 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
                           ),
                         ),
                       ],
-                      if (_plan != null &&
-                          _group != null &&
-                          _plan!.orderedOrderIds.isNotEmpty) ...[
+                      if (hasRoutePlanData) ...[
                         const SizedBox(height: 12),
                         Text(
                           'Thứ tự điểm trên lộ trình',
@@ -1426,13 +1433,16 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
                           children: [
                             for (
                               var index = 0;
-                              index < _plan!.orderedOrderIds.length;
+                              index < routeOrderIdsForDisplay.length;
                               index++
                             )
                               _RouteStopChip(
                                 index: index + 1,
                                 label: _resolveOrderAddressLabel(
-                                  _plan!.orderedOrderIds[index],
+                                  routeOrderIdsForDisplay[index],
+                                ),
+                                pendingItems: _countPendingGroupItemsForOrder(
+                                  routeOrderIdsForDisplay[index],
                                 ),
                               ),
                           ],
@@ -1754,6 +1764,11 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
   }
 
   String? _resolveNextOrderIdForExecution() {
+    final actionableRouteOrderIds = _resolveActionableRouteOrderIds();
+    if (actionableRouteOrderIds.isNotEmpty) {
+      return actionableRouteOrderIds.first;
+    }
+
     final plan = _plan;
     final group = _group;
     if (plan == null || group == null) {
@@ -1777,7 +1792,70 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
     return null;
   }
 
+  List<String> _resolveActionableRouteOrderIds() {
+    final plan = _plan;
+    final group = _group;
+    if (plan == null || group == null || group.orders.isEmpty) {
+      return const [];
+    }
+
+    final orderById = <String, DeliveryOrder>{
+      for (final order in group.orders) order.orderId: order,
+    };
+
+    final result = <String>[];
+    final added = <String>{};
+
+    for (final orderedId in plan.orderedOrderIds) {
+      final order = orderById[orderedId];
+      if (order == null || !_isOrderActionable(order)) {
+        continue;
+      }
+      if (added.add(order.orderId)) {
+        result.add(order.orderId);
+      }
+    }
+
+    // Keep backward compatibility when BE route payload is stale or partial.
+    for (final order in group.orders) {
+      if (!_isOrderActionable(order)) {
+        continue;
+      }
+      if (added.add(order.orderId)) {
+        result.add(order.orderId);
+      }
+    }
+
+    return result;
+  }
+
+  int _countPendingGroupItemsForOrder(String orderId) {
+    final group = _group;
+    final groupId = widget.groupId?.trim();
+    if (group == null || groupId == null || groupId.isEmpty) {
+      return 0;
+    }
+
+    for (final order in group.orders) {
+      if (order.orderId != orderId) {
+        continue;
+      }
+
+      return order.items
+          .where((item) => _isActionableGroupItem(item, groupId))
+          .length;
+    }
+
+    return 0;
+  }
+
   bool _isOrderActionable(DeliveryOrder order) {
+    final groupId = widget.groupId?.trim();
+    if (groupId != null && groupId.isNotEmpty && order.items.isNotEmpty) {
+      return order.items.any((item) => _isActionableGroupItem(item, groupId));
+    }
+
+    // Backward-compatible fallback when item-level payload is unavailable.
     return !order.isCompleted &&
         !order.isFailed &&
         order.status != DeliveryOrderStatus.deliveredWaitConfirm &&
@@ -1790,7 +1868,21 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
     if (group == null || group.orders.isEmpty) {
       return false;
     }
-    // Group is complete if all orders are in terminal state for shipper flow.
+
+    final groupId = widget.groupId?.trim();
+    if (groupId != null && groupId.isNotEmpty) {
+      final groupedItems = group.orders
+          .expand((order) => order.items)
+          .where((item) => _isItemBelongsToGroup(item, groupId))
+          .where((item) => item.isPackagingCompleted)
+          .toList();
+
+      if (groupedItems.isNotEmpty) {
+        return groupedItems.every(_isTerminalGroupItem);
+      }
+    }
+
+    // Backward-compatible fallback when item-level payload is unavailable.
     return group.orders.every(
       (order) =>
           order.isCompleted ||
@@ -1799,6 +1891,35 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
           order.status == DeliveryOrderStatus.canceled ||
           order.status == DeliveryOrderStatus.refunded,
     );
+  }
+
+  bool _isActionableGroupItem(DeliveryOrderItem item, String groupId) {
+    if (!_isItemBelongsToGroup(item, groupId)) {
+      return false;
+    }
+    if (!item.isPackagingCompleted) {
+      return false;
+    }
+    return !_isTerminalGroupItem(item);
+  }
+
+  bool _isTerminalGroupItem(DeliveryOrderItem item) {
+    final status = _normalizeItemDeliveryStatus(item.deliveryStatus);
+    return status == 'completed' ||
+        status == 'failed' ||
+        status == 'deliveredwaitconfirm';
+  }
+
+  bool _isItemBelongsToGroup(DeliveryOrderItem item, String groupId) {
+    final itemGroupId = item.deliveryGroupId?.trim();
+    if (itemGroupId == null || itemGroupId.isEmpty) {
+      return false;
+    }
+    return itemGroupId.toLowerCase() == groupId.toLowerCase();
+  }
+
+  String _normalizeItemDeliveryStatus(String? status) {
+    return (status ?? '').trim().toLowerCase().replaceAll('_', '');
   }
 
   void _onCompleteGroupPressed(BuildContext context) {
@@ -1825,8 +1946,13 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
 class _RouteStopChip extends StatelessWidget {
   final int index;
   final String label;
+  final int pendingItems;
 
-  const _RouteStopChip({required this.index, required this.label});
+  const _RouteStopChip({
+    required this.index,
+    required this.label,
+    this.pendingItems = 0,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1840,7 +1966,9 @@ class _RouteStopChip extends StatelessWidget {
         ),
       ),
       child: Text(
-        '$index. $label',
+        pendingItems > 0
+            ? '$index. $label (còn $pendingItems item)'
+            : '$index. $label',
         style: AppTypography.bodyRegular1.copyWith(
           fontSize: 11,
           fontWeight: FontWeight.w600,
