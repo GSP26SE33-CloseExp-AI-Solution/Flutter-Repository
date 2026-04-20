@@ -181,7 +181,9 @@ class _ThreadCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: item.isRead ? Colors.white : const Color(0xFFF2F8FF),
+        color: item.isRead
+            ? AppColors.surfaceWhite
+            : AppColors.notificationUnreadBackground,
         border: Border.all(color: AppColors.cardBorder),
         borderRadius: BorderRadius.circular(14),
       ),

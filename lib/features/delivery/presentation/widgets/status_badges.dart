@@ -58,7 +58,7 @@ Color getGroupStatusColor(DeliveryGroupStatus status) {
     case DeliveryGroupStatus.assigned:
       return AppColors.primaryGradientStart;
     case DeliveryGroupStatus.inTransit:
-      return const Color(0xFF7C3AED); // purple — in-transit
+      return AppColors.statusInTransit;
     case DeliveryGroupStatus.completed:
       return AppColors.successGradientStart;
     case DeliveryGroupStatus.failed:
@@ -76,9 +76,9 @@ Color getOrderStatusColor(DeliveryOrderStatus status) {
       return AppColors.accent; // teal/green
     case DeliveryOrderStatus.pickedUp:
     case DeliveryOrderStatus.deliveryInTransit:
-      return const Color(0xFF2563EB); // blue — delivery leg
+      return AppColors.statusDeliveryLeg;
     case DeliveryOrderStatus.deliveredWaitConfirm:
-      return const Color(0xFF7C3AED); // purple
+      return AppColors.statusInTransit;
     case DeliveryOrderStatus.completed:
       return AppColors.successGradientStart; // green
     case DeliveryOrderStatus.failed:

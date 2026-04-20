@@ -413,7 +413,7 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
             subtitle: Text(
               _isCompletedTab
                   ? 'Tab Hoàn thành luôn dùng phân trang thông thường'
-                  : 'Bật để lấy top nhóm ưu tiên từ backend',
+                  : 'Bật để lấy top nhóm ưu tiên từ hệ thống',
             ),
             value: _useWorkQueueMode,
             onChanged: (value) {

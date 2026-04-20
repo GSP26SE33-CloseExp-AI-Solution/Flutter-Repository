@@ -53,7 +53,7 @@ class _DeliveryGroupDetailsPageState extends State<DeliveryGroupDetailsPage> {
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
-            color: AppColors.headerGradientEnd,
+            color: AppColors.background,
             onPressed: _loadGroupDetails,
             tooltip: 'Làm mới',
           ),

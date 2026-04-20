@@ -1124,6 +1124,7 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
         : actionableRouteOrderIds;
     final hasRoutePlanData = routeOrderIdsForDisplay.isNotEmpty;
     final hasActionableStops = actionableRouteOrderIds.isNotEmpty;
+    final isGroupFinalized = _isGroupFinalized();
     final distanceSubtitle = plan != null && plan.metric == 'distance'
         ? plan.summaryLabel
         : (plan != null
@@ -1196,9 +1197,21 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
           actions: [
             if (_hasValidGroupId)
               TextButton.icon(
-                onPressed: () => context.go(
-                  Routes.deliveryGroupDetails(widget.groupId!.trim()),
-                ),
+                onPressed: () {
+                  final groupRoute = Routes.deliveryGroupDetails(
+                    widget.groupId!.trim(),
+                  );
+                  final router = GoRouter.of(context);
+
+                  // Keep back stack: if map was opened from details, pop back.
+                  if (router.canPop()) {
+                    context.pop();
+                    return;
+                  }
+
+                  // Fallback for direct-entry map (deep link/debug launch).
+                  context.push(groupRoute);
+                },
                 icon: const Icon(
                   Icons.assignment_outlined,
                   color: Colors.white,
@@ -1481,60 +1494,83 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 56,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: _isGroupComplete()
-                                  ? [
-                                      AppColors.successGradientStart,
-                                      AppColors.successGradientEnd,
-                                    ]
-                                  : [
-                                      AppColors.headerGradientStart,
-                                      AppColors.headerGradientEnd,
-                                    ],
-                            ),
-                            borderRadius: BorderRadius.circular(16),
+                      if (isGroupFinalized)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
                           ),
-                          child: BlocBuilder<DeliveryBloc, DeliveryState>(
-                            builder: (context, state) {
-                              final isLoadingComplete =
-                                  state is DeliveryLoading &&
-                                  (state.message?.contains('hoàn thành nhóm') ??
-                                      false);
-                              return TextButton.icon(
-                                onPressed: (_loading || isLoadingComplete)
-                                    ? null
-                                    : () {
-                                        if (_isGroupComplete()) {
-                                          _onCompleteGroupPressed(context);
-                                        } else {
-                                          _onStartDeliveryPressed(context);
-                                        }
-                                      },
-                                icon: Icon(
-                                  _isGroupComplete()
-                                      ? Icons.check_circle
-                                      : Icons.play_arrow,
-                                  color: Colors.white,
-                                ),
-                                label: Text(
-                                  _isGroupComplete()
-                                      ? 'Hoàn thành nhóm giao'
-                                      : 'Bắt đầu giao hàng',
-                                  style: AppTypography.subHeader.copyWith(
+                          decoration: BoxDecoration(
+                            color: AppColors.cardSurface,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: AppColors.cardBorder),
+                          ),
+                          child: Text(
+                            'Nhóm giao đã ở trạng thái kết thúc, không còn thao tác khả dụng.',
+                            style: AppTypography.bodyRegular1.copyWith(
+                              color: AppColors.textSecondary,
+                              fontSize: 12,
+                            ),
+                          ),
+                        )
+                      else
+                        SizedBox(
+                          width: double.infinity,
+                          height: 56,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: _isGroupComplete()
+                                    ? [
+                                        AppColors.successGradientStart,
+                                        AppColors.successGradientEnd,
+                                      ]
+                                    : [
+                                        AppColors.headerGradientStart,
+                                        AppColors.headerGradientEnd,
+                                      ],
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: BlocBuilder<DeliveryBloc, DeliveryState>(
+                              builder: (context, state) {
+                                final isLoadingComplete =
+                                    state is DeliveryLoading &&
+                                    (state.message?.contains(
+                                          'hoàn thành nhóm',
+                                        ) ??
+                                        false);
+                                return TextButton.icon(
+                                  onPressed: (_loading || isLoadingComplete)
+                                      ? null
+                                      : () {
+                                          if (_isGroupComplete()) {
+                                            _onCompleteGroupPressed(context);
+                                          } else {
+                                            _onStartDeliveryPressed(context);
+                                          }
+                                        },
+                                  icon: Icon(
+                                    _isGroupComplete()
+                                        ? Icons.check_circle
+                                        : Icons.play_arrow,
                                     color: Colors.white,
-                                    fontSize: 16,
                                   ),
-                                ),
-                              );
-                            },
+                                  label: Text(
+                                    _isGroupComplete()
+                                        ? 'Hoàn thành nhóm giao'
+                                        : 'Bắt đầu giao hàng',
+                                    style: AppTypography.subHeader.copyWith(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
                           ),
                         ),
-                      ),
                     ],
                   ],
                 ),
@@ -1863,6 +1899,16 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
         order.status != DeliveryOrderStatus.refunded;
   }
 
+  bool _isGroupFinalized() {
+    final group = _group;
+    if (group == null) {
+      return false;
+    }
+
+    return group.status == DeliveryGroupStatus.completed ||
+        group.status == DeliveryGroupStatus.failed;
+  }
+
   bool _isGroupComplete() {
     final group = _group;
     if (group == null || group.orders.isEmpty) {
@@ -1923,6 +1969,16 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
   }
 
   void _onCompleteGroupPressed(BuildContext context) {
+    if (_isGroupFinalized()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Nhóm giao đã kết thúc, không thể hoàn thành lại'),
+          backgroundColor: AppColors.textSecondary,
+        ),
+      );
+      return;
+    }
+
     final groupId = widget.groupId?.trim();
     if (groupId == null || groupId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(

@@ -95,7 +95,7 @@ class ProfilePage extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.surfaceWhite,
                 border: Border.all(color: AppColors.cardBorder),
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
@@ -117,7 +117,7 @@ class ProfilePage extends StatelessWidget {
                         width: 48,
                         height: 48,
                         decoration: const BoxDecoration(
-                          color: Color(0xFFF3F4F6),
+                          color: AppColors.avatarBackground,
                           shape: BoxShape.circle,
                         ),
                         child: Center(
@@ -127,7 +127,7 @@ class ProfilePage extends StatelessWidget {
                                 : 'D',
                             style: AppTypography.subHeader.copyWith(
                               fontSize: 18,
-                              color: const Color(0xFF495565),
+                              color: AppColors.bodyOnSurface,
                             ),
                           ),
                         ),

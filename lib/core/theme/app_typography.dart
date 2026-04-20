@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'app_colors.dart';
+
 /// App text styles based on provided design system.
 ///
 /// Note: assumes fonts "DM Sans" và "Be Vietnam Pro" đã được add vào project.
@@ -16,7 +18,7 @@ class AppTypography {
     fontSize: 24,
     fontWeight: FontWeight.w700,
     letterSpacing: -0.72,
-    color: Colors.black,
+    color: AppColors.textPrimary,
   );
 
   static const header2 = TextStyle(
@@ -24,7 +26,7 @@ class AppTypography {
     fontSize: 16,
     fontWeight: FontWeight.w700,
     letterSpacing: -0.48,
-    color: Colors.black,
+    color: AppColors.textPrimary,
   );
 
   static const header3 = TextStyle(
@@ -32,7 +34,7 @@ class AppTypography {
     fontSize: 14,
     fontWeight: FontWeight.w400,
     height: 1.5,
-    color: Colors.black,
+    color: AppColors.textPrimary,
   );
 
   static const subHeader = TextStyle(
@@ -41,7 +43,7 @@ class AppTypography {
     fontWeight: FontWeight.w700,
     letterSpacing: -0.16,
     height: 1.5,
-    color: Colors.black,
+    color: AppColors.textPrimary,
   );
 
   static const highlighter = subHeader;
@@ -51,7 +53,7 @@ class AppTypography {
     fontSize: 11,
     fontWeight: FontWeight.w400,
     height: 1.5,
-    color: Colors.black,
+    color: AppColors.textPrimary,
   );
 
   // Map to Flutter TextTheme slots for convenience
@@ -65,4 +67,3 @@ class AppTypography {
     );
   }
 }
-

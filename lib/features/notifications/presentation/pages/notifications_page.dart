@@ -230,7 +230,9 @@ class _NotificationCard extends StatelessWidget {
       child: Ink(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: item.isRead ? Colors.white : const Color(0xFFF2F8FF),
+          color: item.isRead
+              ? AppColors.surfaceWhite
+              : AppColors.notificationUnreadBackground,
           border: Border.all(color: AppColors.cardBorder),
           borderRadius: BorderRadius.circular(14),
         ),
@@ -309,7 +311,7 @@ class _MetaChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F7FB),
+        color: AppColors.notificationMetaChipBackground,
         borderRadius: BorderRadius.circular(24),
       ),
       child: Padding(
