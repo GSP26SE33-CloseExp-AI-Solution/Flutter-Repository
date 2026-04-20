@@ -111,6 +111,13 @@ class ApiConstants {
   // ============== USER PROFILE ENDPOINTS ==============
   static const String updateCurrentUser = '/users/current-user';
 
+  // ============== NOTIFICATION ENDPOINTS ==============
+  static const String notificationsMe = '/notifications/me';
+  static String notificationsByOrder(String orderId) =>
+      '/notifications/me/order/$orderId';
+  static String notificationById(String notificationId) =>
+      '/notifications/$notificationId';
+
   // ============== TIMEOUTS ==============
   static const Duration connectionTimeout = Duration(seconds: 30);
   static const Duration receiveTimeout = Duration(seconds: 30);

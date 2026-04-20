@@ -1,14 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_event.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
+import '../../../notifications/presentation/bloc/notifications_bloc.dart';
+import '../../../notifications/presentation/bloc/notifications_state.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
+
+  int _resolveUnreadCount(NotificationsState state) {
+    if (state is NotificationsListLoaded) {
+      return state.unreadCount;
+    }
+    return 0;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,6 +36,52 @@ class ProfilePage extends StatelessWidget {
               ),
             ),
             actions: [
+              BlocBuilder<NotificationsBloc, NotificationsState>(
+                builder: (context, notificationState) {
+                  final unreadCount = _resolveUnreadCount(notificationState);
+                  return IconButton(
+                    tooltip: 'Thông báo',
+                    onPressed: () => context.push(Routes.notifications),
+                    icon: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        const Icon(
+                          Icons.notifications_none,
+                          color: AppColors.neutralDark,
+                        ),
+                        if (unreadCount > 0)
+                          Positioned(
+                            right: -3,
+                            top: -3,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 5,
+                                vertical: 2,
+                              ),
+                              decoration: const BoxDecoration(
+                                color: AppColors.error,
+                                shape: BoxShape.rectangle,
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(10),
+                                ),
+                              ),
+                              child: Text(
+                                unreadCount > 99
+                                    ? '99+'
+                                    : unreadCount.toString(),
+                                style: AppTypography.bodyRegular1.copyWith(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
+                },
+              ),
               IconButton(
                 tooltip: 'Đăng xuất',
                 icon: const Icon(Icons.logout, color: AppColors.error),
@@ -117,6 +174,44 @@ class ProfilePage extends StatelessWidget {
                       label: 'Số điện thoại',
                       value: user.phone,
                     ),
+
+                  const SizedBox(height: 14),
+                  const Divider(color: AppColors.cardBorder),
+                  const SizedBox(height: 6),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    onTap: () => context.push(Routes.notifications),
+                    leading: const Icon(
+                      Icons.notifications_active_outlined,
+                      color: AppColors.primary,
+                    ),
+                    title: Text(
+                      'Trung tâm thông báo',
+                      style: AppTypography.subHeader.copyWith(
+                        color: AppColors.neutralDark,
+                      ),
+                    ),
+                    subtitle:
+                        BlocBuilder<NotificationsBloc, NotificationsState>(
+                          builder: (context, notificationState) {
+                            final unreadCount = _resolveUnreadCount(
+                              notificationState,
+                            );
+                            return Text(
+                              unreadCount > 0
+                                  ? 'Bạn có $unreadCount thông báo chưa đọc'
+                                  : 'Không có thông báo chưa đọc',
+                              style: AppTypography.bodyRegular1.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            );
+                          },
+                        ),
+                    trailing: const Icon(
+                      Icons.chevron_right,
+                      color: AppColors.neutralMid,
+                    ),
+                  ),
                 ],
               ),
             ),

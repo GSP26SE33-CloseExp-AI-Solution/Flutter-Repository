@@ -22,6 +22,13 @@ import '../features/delivery/domain/repositories/upload_repository.dart';
 import '../features/delivery/domain/services/shipper_location_service.dart';
 import '../features/delivery/domain/usecases/upload_proof_image_usecase.dart';
 import '../features/delivery/presentation/bloc/delivery_bloc.dart';
+import '../features/notifications/data/datasources/notification_remote_datasource.dart';
+import '../features/notifications/data/repositories/notification_repository_impl.dart';
+import '../features/notifications/domain/repositories/notification_repository.dart';
+import '../features/notifications/domain/usecases/get_my_notifications.dart';
+import '../features/notifications/domain/usecases/get_order_notifications.dart';
+import '../features/notifications/domain/usecases/mark_notification_read.dart';
+import '../features/notifications/presentation/bloc/notifications_bloc.dart';
 
 // Service Locator using GetIt
 //
@@ -116,4 +123,30 @@ Future<void> initializeDependencies() async {
 
   // BLoC - Factory (new instance each time)
   sl.registerFactory<DeliveryBloc>(() => DeliveryBloc(repository: sl()));
+
+  // ============== NOTIFICATIONS FEATURE ==============
+
+  // Data Sources
+  sl.registerLazySingleton<NotificationRemoteDataSource>(
+    () => NotificationRemoteDataSourceImpl(dio: sl<DioClient>().dio),
+  );
+
+  // Repository
+  sl.registerLazySingleton<NotificationRepository>(
+    () => NotificationRepositoryImpl(remoteDataSource: sl(), networkInfo: sl()),
+  );
+
+  // Use Cases
+  sl.registerLazySingleton(() => GetMyNotificationsUseCase(sl()));
+  sl.registerLazySingleton(() => GetOrderNotificationsUseCase(sl()));
+  sl.registerLazySingleton(() => MarkNotificationReadUseCase(sl()));
+
+  // BLoC - Factory (new instance each time)
+  sl.registerFactory<NotificationsBloc>(
+    () => NotificationsBloc(
+      getMyNotificationsUseCase: sl(),
+      getOrderNotificationsUseCase: sl(),
+      markNotificationReadUseCase: sl(),
+    ),
+  );
 }

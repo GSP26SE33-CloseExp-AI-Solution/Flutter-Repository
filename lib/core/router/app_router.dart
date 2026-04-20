@@ -14,6 +14,8 @@ import '../../features/delivery/presentation/pages/delivery_stats_page.dart';
 import '../../features/delivery/presentation/pages/my_deliveries_page.dart';
 import '../../features/delivery/presentation/pages/order_details_page.dart';
 import '../../features/home/presentation/pages/main_shell_page.dart';
+import '../../features/notifications/presentation/pages/notification_thread_page.dart';
+import '../../features/notifications/presentation/pages/notifications_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../injection_container.dart';
 
@@ -190,6 +192,27 @@ class AppRouter {
             );
           },
         ),
+
+        // Notifications inbox
+        GoRoute(
+          path: Routes.notifications,
+          name: 'notifications',
+          builder: (context, state) => const NotificationsPage(),
+        ),
+
+        // Notification thread for specific order
+        GoRoute(
+          path: '${Routes.notificationsThread}/:orderId',
+          name: 'notification-thread',
+          builder: (context, state) {
+            final orderId = state.pathParameters['orderId']!;
+            final orderCode = state.extra as String?;
+            return NotificationThreadPage(
+              orderId: orderId,
+              orderCode: orderCode,
+            );
+          },
+        ),
       ],
     );
   }
@@ -211,6 +234,8 @@ class Routes {
   static const String deliveryHistory = '/delivery/history';
   static const String deliveryStats = '/delivery/stats';
   static const String deliveryMap = '/delivery/map';
+  static const String notifications = '/notifications';
+  static const String notificationsThread = '/notifications/thread';
 
   // Helper methods for parameterized routes
   static String deliveryGroupDetails(String groupId) =>
@@ -220,6 +245,9 @@ class Routes {
     if (groupId == null || groupId.trim().isEmpty) return base;
     return '$base?groupId=${Uri.encodeComponent(groupId.trim())}';
   }
+
+  static String notificationThread(String orderId) =>
+      '/notifications/thread/$orderId';
 }
 
 /// Refresh notifier for GoRouter to listen to AuthBloc changes
