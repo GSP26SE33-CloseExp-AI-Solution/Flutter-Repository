@@ -35,3 +35,14 @@ class LogoutEvent extends AuthEvent {
 class SessionExpiredEvent extends AuthEvent {
   const SessionExpiredEvent();
 }
+
+/// Update profile details for current shipper
+class UpdateProfileEvent extends AuthEvent {
+  final String fullName;
+  final String? phone;
+
+  const UpdateProfileEvent({required this.fullName, this.phone});
+
+  @override
+  List<Object?> get props => [fullName, phone];
+}

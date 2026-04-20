@@ -4,6 +4,7 @@ import '../../../../core/error/failures.dart';
 import '../../../../core/network/network_info.dart';
 import '../../domain/entities/auth_result.dart';
 import '../../domain/entities/user.dart';
+import '../../domain/entities/user_image.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_local_datasource.dart';
 import '../datasources/auth_remote_datasource.dart';
@@ -57,8 +58,6 @@ class AuthRepositoryImpl implements AuthRepository {
     }
   }
 
-
-
   @override
   Future<Either<Failure, AuthResult>> refreshToken() async {
     if (!await _networkInfo.isConnected) {
@@ -110,7 +109,7 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<Either<Failure, void>> logoutWithToken() async {
     try {
       final refreshToken = await _localDataSource.getRefreshToken();
-      
+
       if (refreshToken != null && await _networkInfo.isConnected) {
         try {
           await _remoteDataSource.logout(refreshToken: refreshToken);
@@ -159,8 +158,6 @@ class AuthRepositoryImpl implements AuthRepository {
       return Left(UnknownFailure(message: e.toString()));
     }
   }
-
-
 
   @override
   Future<Either<Failure, User>> getCachedUser() async {
@@ -211,7 +208,9 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       final token = await _localDataSource.getRefreshToken();
       if (token == null) {
-        return const Left(CacheFailure(message: 'Không tìm thấy refresh token'));
+        return const Left(
+          CacheFailure(message: 'Không tìm thấy refresh token'),
+        );
       }
       return Right(token);
     } on CacheException catch (e) {
@@ -237,7 +236,9 @@ class AuthRepositoryImpl implements AuthRepository {
         final accessToken = await _localDataSource.getAccessToken();
         final refreshToken = await _localDataSource.getRefreshToken();
         final tokenExpiry = await _localDataSource.getTokenExpiry();
-        if (accessToken != null && refreshToken != null && tokenExpiry != null) {
+        if (accessToken != null &&
+            refreshToken != null &&
+            tokenExpiry != null) {
           await _localDataSource.cacheAuthData(
             accessToken: accessToken,
             refreshToken: refreshToken,
@@ -300,7 +301,79 @@ class AuthRepositoryImpl implements AuthRepository {
     }
   }
 
+  @override
+  Future<Either<Failure, UserImage?>> getPrimaryImage() async {
+    if (!await _networkInfo.isConnected) {
+      return const Left(NetworkFailure());
+    }
 
+    try {
+      final image = await _remoteDataSource.getPrimaryImage();
+      return Right(image);
+    } on AuthenticationException catch (e) {
+      return Left(
+        AuthenticationFailure(message: e.message, statusCode: e.statusCode),
+      );
+    } on NetworkException catch (e) {
+      return Left(NetworkFailure(message: e.message));
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message, statusCode: e.statusCode));
+    } catch (e) {
+      return Left(UnknownFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, UserImage>> uploadCurrentUserImage({
+    required String filePath,
+    String imageType = 'avatar',
+    bool setAsPrimary = true,
+  }) async {
+    if (!await _networkInfo.isConnected) {
+      return const Left(NetworkFailure());
+    }
+
+    try {
+      final image = await _remoteDataSource.uploadCurrentUserImage(
+        filePath: filePath,
+        imageType: imageType,
+        setAsPrimary: setAsPrimary,
+      );
+      return Right(image);
+    } on AuthenticationException catch (e) {
+      return Left(
+        AuthenticationFailure(message: e.message, statusCode: e.statusCode),
+      );
+    } on NetworkException catch (e) {
+      return Left(NetworkFailure(message: e.message));
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message, statusCode: e.statusCode));
+    } catch (e) {
+      return Left(UnknownFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> deleteCurrentUserImage(String imageId) async {
+    if (!await _networkInfo.isConnected) {
+      return const Left(NetworkFailure());
+    }
+
+    try {
+      await _remoteDataSource.deleteCurrentUserImage(imageId);
+      return const Right(null);
+    } on AuthenticationException catch (e) {
+      return Left(
+        AuthenticationFailure(message: e.message, statusCode: e.statusCode),
+      );
+    } on NetworkException catch (e) {
+      return Left(NetworkFailure(message: e.message));
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message, statusCode: e.statusCode));
+    } catch (e) {
+      return Left(UnknownFailure(message: e.toString()));
+    }
+  }
 
   // ============== Private Helpers ==============
 

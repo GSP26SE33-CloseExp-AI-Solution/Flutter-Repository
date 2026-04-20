@@ -54,3 +54,18 @@ class LoginLoading extends AuthState {
 class LogoutLoading extends AuthState {
   const LogoutLoading();
 }
+
+/// Profile update is processing while session remains authenticated
+class ProfileUpdateLoading extends AuthAuthenticated {
+  const ProfileUpdateLoading({required super.user});
+}
+
+/// Profile update failed while session remains authenticated
+class ProfileUpdateFailure extends AuthAuthenticated {
+  final String message;
+
+  const ProfileUpdateFailure({required super.user, required this.message});
+
+  @override
+  List<Object?> get props => [user, message];
+}

@@ -5,6 +5,7 @@ import '../../domain/usecases/get_cached_user_usecase.dart';
 import '../../domain/usecases/login_usecase.dart';
 import '../../domain/usecases/logout_usecase.dart';
 import '../../domain/usecases/refresh_token_usecase.dart';
+import '../../domain/usecases/update_profile_usecase.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
 
@@ -18,6 +19,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final RefreshTokenUseCase _refreshTokenUseCase;
   final CheckAuthStatusUseCase _checkAuthStatusUseCase;
   final GetCachedUserUseCase _getCachedUserUseCase;
+  final UpdateProfileUseCase _updateProfileUseCase;
 
   AuthBloc({
     required LoginUseCase loginUseCase,
@@ -25,16 +27,19 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required RefreshTokenUseCase refreshTokenUseCase,
     required CheckAuthStatusUseCase checkAuthStatusUseCase,
     required GetCachedUserUseCase getCachedUserUseCase,
+    required UpdateProfileUseCase updateProfileUseCase,
   }) : _loginUseCase = loginUseCase,
        _logoutUseCase = logoutUseCase,
        _refreshTokenUseCase = refreshTokenUseCase,
        _checkAuthStatusUseCase = checkAuthStatusUseCase,
        _getCachedUserUseCase = getCachedUserUseCase,
+       _updateProfileUseCase = updateProfileUseCase,
        super(const AuthInitial()) {
     on<CheckAuthStatusEvent>(_onCheckAuthStatus);
     on<LoginEvent>(_onLogin);
     on<LogoutEvent>(_onLogout);
     on<SessionExpiredEvent>(_onSessionExpired);
+    on<UpdateProfileEvent>(_onUpdateProfile);
   }
 
   Future<void> _onCheckAuthStatus(
@@ -108,5 +113,31 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     await _logoutUseCase(const NoParams());
     emit(const AuthUnauthenticated());
+  }
+
+  Future<void> _onUpdateProfile(
+    UpdateProfileEvent event,
+    Emitter<AuthState> emit,
+  ) async {
+    final currentState = state;
+    if (currentState is! AuthAuthenticated) {
+      return;
+    }
+
+    emit(ProfileUpdateLoading(user: currentState.user));
+
+    final result = await _updateProfileUseCase(
+      UpdateProfileParams(
+        fullName: event.fullName.trim(),
+        phone: event.phone?.trim(),
+      ),
+    );
+
+    result.fold(
+      (failure) => emit(
+        ProfileUpdateFailure(user: currentState.user, message: failure.message),
+      ),
+      (user) => emit(AuthAuthenticated(user: user)),
+    );
   }
 }

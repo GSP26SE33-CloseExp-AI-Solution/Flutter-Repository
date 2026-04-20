@@ -110,6 +110,11 @@ class ApiConstants {
 
   // ============== USER PROFILE ENDPOINTS ==============
   static const String updateCurrentUser = '/users/current-user';
+  static const String currentUserImages = '/users/current-user/images';
+  static const String currentUserPrimaryImage =
+      '/users/current-user/images/primary';
+  static String currentUserImageById(String imageId) =>
+      '/users/current-user/images/$imageId';
 
   // ============== NOTIFICATION ENDPOINTS ==============
   static const String notificationsMe = '/notifications/me';

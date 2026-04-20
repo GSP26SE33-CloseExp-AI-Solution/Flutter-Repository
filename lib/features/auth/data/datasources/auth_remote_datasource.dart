@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/error/exceptions.dart';
 import '../models/auth_response_model.dart';
+import '../models/user_image_model.dart';
 import '../models/user_model.dart';
 
 /// Auth Remote Data Source - Data Layer
@@ -30,6 +31,19 @@ abstract class AuthRemoteDataSource {
 
   /// Update current user profile
   Future<UserModel> updateProfile({String? fullName, String? phone});
+
+  /// Get primary avatar image of current user
+  Future<UserImageModel?> getPrimaryImage();
+
+  /// Upload image and set as primary avatar if needed
+  Future<UserImageModel> uploadCurrentUserImage({
+    required String filePath,
+    String imageType,
+    bool setAsPrimary,
+  });
+
+  /// Delete a current user image by id
+  Future<void> deleteCurrentUserImage(String imageId);
 }
 
 /// Implementation of AuthRemoteDataSource
@@ -235,6 +249,68 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     }
   }
 
+  @override
+  Future<UserImageModel?> getPrimaryImage() async {
+    try {
+      final response = await _dio.get(ApiConstants.currentUserPrimaryImage);
+      return _handleUserImageResponse(response);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        return null;
+      }
+      throw _handleDioError(e, 'Không thể tải ảnh đại diện');
+    }
+  }
+
+  @override
+  Future<UserImageModel> uploadCurrentUserImage({
+    required String filePath,
+    String imageType = 'avatar',
+    bool setAsPrimary = true,
+  }) async {
+    try {
+      final fileName = filePath.replaceAll(r'\\', '/').split('/').last;
+      final mimeType = _getMimeType(fileName);
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(
+          filePath,
+          filename: fileName,
+          contentType: DioMediaType.parse(mimeType),
+        ),
+      });
+
+      final response = await _dio.post(
+        ApiConstants.currentUserImages,
+        queryParameters: {'imageType': imageType, 'setAsPrimary': setAsPrimary},
+        data: formData,
+        options: Options(contentType: 'multipart/form-data'),
+      );
+
+      final image = _handleUserImageResponse(response);
+      if (image == null) {
+        throw const ServerException(
+          message: 'Phản hồi upload ảnh không hợp lệ',
+        );
+      }
+
+      return image;
+    } on DioException catch (e) {
+      throw _handleDioError(e, 'Không thể tải ảnh đại diện');
+    }
+  }
+
+  @override
+  Future<void> deleteCurrentUserImage(String imageId) async {
+    try {
+      final response = await _dio.delete(
+        ApiConstants.currentUserImageById(imageId),
+      );
+      _handleApiResponse(response, 'Xóa ảnh đại diện thất bại');
+    } on DioException catch (e) {
+      throw _handleDioError(e, 'Xóa ảnh đại diện thất bại');
+    }
+  }
+
   UserModel _handleUserResponse(Response response) {
     if (response.statusCode == 200) {
       final apiResponse = response.data as Map<String, dynamic>;
@@ -252,6 +328,46 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         message: 'Thao tác thất bại',
         statusCode: response.statusCode,
       );
+    }
+  }
+
+  UserImageModel? _handleUserImageResponse(Response response) {
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final apiResponse = response.data as Map<String, dynamic>;
+
+      if (apiResponse['success'] == true) {
+        final data = apiResponse['data'];
+        if (data is! Map<String, dynamic>) {
+          return null;
+        }
+        return UserImageModel.fromJson(data);
+      }
+
+      throw ServerException(
+        message: _extractBackendMessage(apiResponse) ?? 'Thao tác thất bại',
+      );
+    }
+
+    throw ServerException(
+      message: 'Thao tác thất bại',
+      statusCode: response.statusCode,
+    );
+  }
+
+  String _getMimeType(String fileName) {
+    final extension = fileName.split('.').last.toLowerCase();
+    switch (extension) {
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'gif':
+        return 'image/gif';
+      case 'webp':
+        return 'image/webp';
+      default:
+        return 'application/octet-stream';
     }
   }
 }

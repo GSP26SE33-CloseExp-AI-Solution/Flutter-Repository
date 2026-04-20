@@ -7,10 +7,14 @@ import '../features/auth/data/datasources/auth_remote_datasource.dart';
 import '../features/auth/data/repositories/auth_repository_impl.dart';
 import '../features/auth/domain/repositories/auth_repository.dart';
 import '../features/auth/domain/usecases/check_auth_status_usecase.dart';
+import '../features/auth/domain/usecases/delete_current_user_image_usecase.dart';
+import '../features/auth/domain/usecases/get_primary_image_usecase.dart';
 import '../features/auth/domain/usecases/get_cached_user_usecase.dart';
 import '../features/auth/domain/usecases/login_usecase.dart';
 import '../features/auth/domain/usecases/logout_usecase.dart';
 import '../features/auth/domain/usecases/refresh_token_usecase.dart';
+import '../features/auth/domain/usecases/update_profile_usecase.dart';
+import '../features/auth/domain/usecases/upload_current_user_image_usecase.dart';
 import '../features/auth/presentation/bloc/auth_bloc.dart';
 import '../features/delivery/data/datasources/delivery_remote_datasource.dart';
 import '../features/delivery/data/datasources/upload_datasource.dart';
@@ -82,6 +86,10 @@ Future<void> initializeDependencies() async {
   sl.registerLazySingleton(() => RefreshTokenUseCase(sl()));
   sl.registerLazySingleton(() => CheckAuthStatusUseCase(sl()));
   sl.registerLazySingleton(() => GetCachedUserUseCase(sl()));
+  sl.registerLazySingleton(() => UpdateProfileUseCase(sl()));
+  sl.registerLazySingleton(() => GetPrimaryImageUseCase(sl()));
+  sl.registerLazySingleton(() => UploadCurrentUserImageUseCase(sl()));
+  sl.registerLazySingleton(() => DeleteCurrentUserImageUseCase(sl()));
 
   // BLoC - Factory (new instance each time)
   sl.registerFactory<AuthBloc>(
@@ -91,6 +99,7 @@ Future<void> initializeDependencies() async {
       refreshTokenUseCase: sl(),
       checkAuthStatusUseCase: sl(),
       getCachedUserUseCase: sl(),
+      updateProfileUseCase: sl(),
     ),
   );
 
