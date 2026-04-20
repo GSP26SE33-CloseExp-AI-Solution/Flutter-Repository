@@ -36,11 +36,11 @@ class MainShellPage extends StatelessWidget {
         backgroundColor: AppColors.surfaceWhite,
         indicatorColor: Colors.transparent,
         destinations: [
-          _NavDestination(label: 'Work', asset: AppIcons.navWork),
-          _NavDestination(label: 'Orders', asset: AppIcons.navPaper),
-          _NavDestination(label: 'History', asset: AppIcons.navChat),
+          _NavDestination(label: 'Công việc', asset: AppIcons.navWork),
+          _NavDestination(label: 'Đơn hàng', asset: AppIcons.navPaper),
+          _NavDestination(label: 'Lịch sử', asset: AppIcons.navChat),
           _NavDestination(
-            label: 'Profile',
+            label: 'Hồ sơ',
             asset: AppIcons.navProfile,
             badgeCount: unreadCount,
           ),
