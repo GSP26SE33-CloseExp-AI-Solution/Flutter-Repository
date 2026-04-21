@@ -46,6 +46,7 @@ abstract class DeliveryRemoteDataSource {
     double? startLatitude,
     double? startLongitude,
     String metric = 'distance',
+    bool skipPickupLeg = false,
   });
 
   // Delivery Orders
@@ -269,12 +270,14 @@ class DeliveryRemoteDataSourceImpl implements DeliveryRemoteDataSource {
     double? startLatitude,
     double? startLongitude,
     String metric = 'distance',
+    bool skipPickupLeg = false,
   }) async {
     try {
       final data = <String, dynamic>{
         'metric': metric,
         if (startLatitude != null) 'startLatitude': startLatitude,
         if (startLongitude != null) 'startLongitude': startLongitude,
+        if (skipPickupLeg) 'skipPickupLeg': true,
       };
       final response = await _dio.post(
         ApiConstants.deliveryGroupRoutePlan(groupId),

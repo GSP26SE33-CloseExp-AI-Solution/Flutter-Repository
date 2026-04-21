@@ -60,9 +60,13 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
 
   DeliveryGroup? _group;
   DeliveryRoutePlan? _plan;
-  String _metric = 'distance';
+  String _metric = 'duration';
   bool _loading = false;
   String? _loadError;
+
+  /// Đánh dấu shipper đã lấy hàng tại siêu thị → BE sẽ bỏ Leg A (pickup) và
+  /// FE sẽ không vẽ chấm siêu thị, không hiển thị panel Chặng A.
+  bool _pickedUp = false;
 
   /// Guard to prevent concurrent annotation application (reduce rebuild churn).
   bool _annotationApplyInProgress = false;
@@ -262,6 +266,7 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
       metric: _metric,
       startLatitude: shipperStart.latitude,
       startLongitude: shipperStart.longitude,
+      skipPickupLeg: _pickedUp,
     );
 
     if (!mounted) return;
@@ -291,6 +296,18 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
     if (_metric == metric || _loading) return;
     setState(() => _metric = metric);
     if (_hasValidGroupId) await _fetchRoutePlanOnly();
+  }
+
+  /// Shipper bấm "Đã lấy hàng" → đánh dấu đã pickup và tái tính route-plan
+  /// với [skipPickupLeg] = true để BE bỏ Leg A (pickup) + FE ẩn chấm siêu thị.
+  Future<void> _onPickedUpPressed() async {
+    if (_pickedUp || _loading) return;
+    setState(() => _pickedUp = true);
+    if (_hasValidGroupId) {
+      await _fetchRoutePlanOnly();
+    } else {
+      _requestMapAnnotationRefresh();
+    }
   }
 
   void _handleBackNavigation(BuildContext context) {
@@ -383,7 +400,7 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
         _currentShipperLocation ?? _resolveFallbackShipperLocation();
 
     final plan = _plan;
-    if (plan == null || plan.encodedPolyline.isEmpty) {
+    if (plan == null || plan.preferredDeliveryPolyline.isEmpty) {
       await _fitToOrdersIfPossible();
       return;
     }
@@ -393,7 +410,7 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
     if (sanitizedRoutePoints.length < 2) {
       if (kDebugMode) {
         debugPrint(
-          'Route render skipped: decoded=${decoded.length}, sanitized=${sanitizedRoutePoints.length}, encoding=${plan.polylineEncoding}',
+          'Route render skipped: decoded=${decoded.length}, sanitized=${sanitizedRoutePoints.length}, encoding=${plan.preferredDeliveryPolylineEncoding}',
         );
       }
       await _fitToOrdersIfPossible();
@@ -482,10 +499,17 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
       }
     }
 
+    final pickupLegPoints = await _renderPickupLegIfAvailable(plan);
+
+    // When pickup leg đã phủ shipper → siêu thị thì không prepend shipperLocation
+    // vào chặng B nữa, tránh nối đường đỏ thẳng đè lên chặng A xanh. Khi shipper
+    // đã bấm "Đã lấy hàng" (_pickedUp) cũng không prepend, tránh vẽ đoạn thẳng
+    // từ vị trí shipper hiện tại tới siêu thị.
     final routePointsForDisplay = _buildDisplayRoutePoints(
       shipperLocation: shipperLocation,
       routePoints: routePoints,
       stopPoints: stopPointsForRoute,
+      prependShipperLocation: pickupLegPoints.isEmpty && !_pickedUp,
     );
 
     await _polylineManager!.create(
@@ -503,11 +527,73 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
 
     if (kDebugMode) {
       debugPrint(
-        'Route rendered: routePoints=${routePoints.length}, displayRoutePoints=${routePointsForDisplay.length}, orderIds=${plan.orderedOrderIds.length}, skipped=${plan.skippedOrderIds.length}, encoding=${plan.polylineEncoding}',
+        'Route rendered: routePoints=${routePoints.length}, displayRoutePoints=${routePointsForDisplay.length}, orderIds=${plan.orderedOrderIds.length}, skipped=${plan.skippedOrderIds.length}, encoding=${plan.preferredDeliveryPolylineEncoding}, pickupLegPoints=${pickupLegPoints.length}',
       );
     }
 
-    await _fitCameraToPoints([...routePointsForDisplay, shipperLocation]);
+    await _fitCameraToPoints([
+      ...routePointsForDisplay,
+      ...pickupLegPoints,
+      shipperLocation,
+    ]);
+  }
+
+  /// Render Leg A (shipper -> supermarket) with a distinct style when BE
+  /// responds with the new [DeliveryRoutePlan.pickupLeg] field. Returns the
+  /// decoded leg points so the caller can extend the camera fit bounds.
+  Future<List<({double latitude, double longitude})>>
+  _renderPickupLegIfAvailable(DeliveryRoutePlan plan) async {
+    final leg = plan.pickupLeg;
+    if (leg == null || leg.encodedPolyline.isEmpty) {
+      return const [];
+    }
+
+    final decoded = Polyline6Decoder.decodeByEncoding(
+      leg.encodedPolyline,
+      leg.polylineEncoding,
+    );
+    final sanitized = _sanitizeRoutePoints(decoded);
+    if (sanitized.length < 2) {
+      if (kDebugMode) {
+        debugPrint(
+          'Pickup leg skipped: decoded=${decoded.length} sanitized=${sanitized.length} encoding=${leg.polylineEncoding}',
+        );
+      }
+      return const [];
+    }
+
+    final points = _downsampleRoutePoints(sanitized);
+    final manager = _polylineManager;
+    if (manager == null) return points;
+
+    await manager.create(
+      PolylineAnnotationOptions(
+        geometry: LineString.fromPoints(
+          points: points
+              .map((p) => Point(coordinates: Position(p.longitude, p.latitude)))
+              .toList(),
+        ),
+        lineColor: const Color(0xFF1D4ED8).toARGB32(),
+        lineWidth: 4,
+        lineOpacity: 0.85,
+      ),
+    );
+
+    final pickupPoint = leg.to;
+    if (pickupPoint != null) {
+      await _createCircleMarker(
+        point: (
+          latitude: pickupPoint.latitude,
+          longitude: pickupPoint.longitude,
+        ),
+        fillColor: const Color(0xFFF59E0B),
+        radius: 8,
+        strokeColor: const Color(0xFFFFFFFF),
+        strokeWidth: 2,
+      );
+    }
+
+    return points;
   }
 
   Future<void> _createCircleMarker({
@@ -601,6 +687,7 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
     required ({double latitude, double longitude}) shipperLocation,
     required List<({double latitude, double longitude})> routePoints,
     required List<({double latitude, double longitude})> stopPoints,
+    bool prependShipperLocation = true,
   }) {
     final hasMultipleDistinctStops = _countDistinctPoints(stopPoints) >= 2;
     final basePoints =
@@ -609,7 +696,9 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
         : routePoints;
 
     final result = <({double latitude, double longitude})>[];
-    result.add(shipperLocation);
+    if (prependShipperLocation) {
+      result.add(shipperLocation);
+    }
 
     for (final p in basePoints) {
       if (result.isEmpty || !_arePointsNear(result.last, p)) {
@@ -696,21 +785,20 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
   List<({double latitude, double longitude})> _decodeRoutePoints(
     DeliveryRoutePlan plan,
   ) {
-    final primary = Polyline6Decoder.decodeByEncoding(
-      plan.encodedPolyline,
-      plan.polylineEncoding,
-    );
+    final encoded = plan.preferredDeliveryPolyline;
+    final encoding = plan.preferredDeliveryPolylineEncoding;
+    final primary = Polyline6Decoder.decodeByEncoding(encoded, encoding);
     if (!_shouldTryAlternativeDecode(primary)) {
       return primary;
     }
 
-    final alt = plan.polylineEncoding.toLowerCase().contains('6')
-        ? Polyline6Decoder.decodeWithPrecision(plan.encodedPolyline, 5)
-        : Polyline6Decoder.decodeWithPrecision(plan.encodedPolyline, 6);
+    final alt = encoding.toLowerCase().contains('6')
+        ? Polyline6Decoder.decodeWithPrecision(encoded, 5)
+        : Polyline6Decoder.decodeWithPrecision(encoded, 6);
 
     if (kDebugMode) {
       debugPrint(
-        'Route decode fallback applied: primary=${primary.length} alt=${alt.length} encoding=${plan.polylineEncoding}',
+        'Route decode fallback applied: primary=${primary.length} alt=${alt.length} encoding=$encoding',
       );
     }
 
@@ -1429,6 +1517,17 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
                           ),
                         ),
                       ],
+                      if (plan != null &&
+                          (plan.pickupLeg != null ||
+                              plan.deliveryLeg != null)) ...[
+                        const SizedBox(height: 12),
+                        _RouteLegsSummary(
+                          pickupLeg: plan.pickupLeg,
+                          deliveryLeg: plan.deliveryLeg,
+                          pickedUp: _pickedUp,
+                          onPickedUp: _loading ? null : _onPickedUpPressed,
+                        ),
+                      ],
                       if (hasRoutePlanData) ...[
                         const SizedBox(height: 12),
                         Text(
@@ -1996,6 +2095,142 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
 
     // Dispatch CompleteDeliveryGroup event
     context.read<DeliveryBloc>().add(CompleteDeliveryGroup(groupId: groupId));
+  }
+}
+
+class _RouteLegsSummary extends StatelessWidget {
+  final RouteLeg? pickupLeg;
+  final RouteLeg? deliveryLeg;
+  final bool pickedUp;
+  final VoidCallback? onPickedUp;
+
+  const _RouteLegsSummary({
+    this.pickupLeg,
+    this.deliveryLeg,
+    this.pickedUp = false,
+    this.onPickedUp,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Phân chặng lộ trình',
+          style: AppTypography.bodyRegular1.copyWith(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (pickupLeg != null)
+          _LegRow(
+            color: const Color(0xFF1D4ED8),
+            title: 'Chặng A • Shipper → Siêu thị',
+            summary: pickupLeg!.summaryLabel,
+          ),
+        if (pickupLeg != null && deliveryLeg != null)
+          const SizedBox(height: 6),
+        if (deliveryLeg != null)
+          _LegRow(
+            color: const Color(0xFFE53935),
+            title: pickedUp
+                ? 'Chặng B • Shipper → Khách'
+                : 'Chặng B • Siêu thị → Khách',
+            summary: deliveryLeg!.summaryLabel,
+          ),
+        if (pickupLeg != null) ...[
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: onPickedUp,
+              icon: const Icon(Icons.shopping_bag_outlined, size: 18),
+              label: const Text('Đã lấy hàng - ẩn Chặng A'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                foregroundColor: const Color(0xFF1D4ED8),
+                side: const BorderSide(color: Color(0xFF1D4ED8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        ] else if (pickedUp) ...[
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Icon(
+                Icons.check_circle,
+                size: 16,
+                color: Color(0xFF059669),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Đã lấy hàng tại siêu thị — chỉ còn chặng giao khách.',
+                  style: AppTypography.bodyRegular1.copyWith(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF059669),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _LegRow extends StatelessWidget {
+  final Color color;
+  final String title;
+  final String summary;
+
+  const _LegRow({
+    required this.color,
+    required this.title,
+    required this.summary,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            title,
+            style: AppTypography.bodyRegular1.copyWith(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
+        ),
+        Text(
+          summary,
+          style: AppTypography.bodyRegular1.copyWith(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textSecondary,
+          ),
+        ),
+      ],
+    );
   }
 }
 

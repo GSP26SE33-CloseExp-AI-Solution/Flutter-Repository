@@ -45,6 +45,78 @@ class DeliveryOrderCard extends StatelessWidget {
     }).length;
   }
 
+  /// Đơn có item thuộc (các) nhóm giao khác → là đơn đa-nhóm (multi-supermarket).
+  /// Dùng để hiển thị hint giúp shipper hiểu vì sao order status chung chưa đóng
+  /// sổ dù nhóm của họ đã xử lý xong.
+  bool _hasItemsInOtherGroups() {
+    final groupId = currentGroupId?.trim().toLowerCase();
+    if (groupId == null || groupId.isEmpty) return false;
+
+    return order.items.any((item) {
+      final itemGroupId = item.deliveryGroupId?.trim().toLowerCase();
+      return itemGroupId != null &&
+          itemGroupId.isNotEmpty &&
+          itemGroupId != groupId;
+    });
+  }
+
+  /// Badge "theo nhóm": mô tả tiến độ của riêng nhóm shipper đang phụ trách.
+  /// Khác với [DeliveryOrderStatusBadge] vốn lấy từ Order.Status (BE gộp tất cả
+  /// nhóm/items), badge này chỉ nói về các item thuộc [currentGroupId].
+  Widget? _buildGroupScopedBadge({
+    required int totalItemsInGroup,
+    required int completedCount,
+    required int failedCount,
+    required int waitConfirmCount,
+    required int inTransitCount,
+    required int actionableCount,
+  }) {
+    if (totalItemsInGroup == 0) return null;
+
+    final terminalCount = completedCount + failedCount + waitConfirmCount;
+    final allTerminal = terminalCount >= totalItemsInGroup;
+
+    String text;
+    Color color;
+    if (allTerminal) {
+      if (failedCount == 0) {
+        text = 'Nhóm đã xong';
+        color = AppColors.successGradientEnd;
+      } else if (completedCount == 0 && waitConfirmCount == 0) {
+        text = 'Nhóm thất bại';
+        color = AppColors.error;
+      } else {
+        text = 'Nhóm đã xong (có lỗi)';
+        color = AppColors.accent;
+      }
+    } else if (inTransitCount > 0) {
+      text = 'Đang giao nhóm';
+      color = AppColors.statusDeliveryLeg;
+    } else if (actionableCount > 0) {
+      text = 'Chờ xử lý nhóm';
+      color = AppColors.headerGradientEnd;
+    } else {
+      text = 'Nhóm đang xử lý';
+      color = AppColors.primaryGradientStart;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        text,
+        style: AppTypography.bodyRegular1.copyWith(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
+      ),
+    );
+  }
+
   Widget _buildItemStatusChip({required String text, required Color color}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -83,6 +155,15 @@ class DeliveryOrderCard extends StatelessWidget {
         .where((item) => item.isPackagingCompleted)
         .where((item) => !item.isDeliveryTerminalForFailure)
         .length;
+    final hasItemsInOtherGroups = _hasItemsInOtherGroups();
+    final groupScopedBadge = _buildGroupScopedBadge(
+      totalItemsInGroup: totalItemsInGroup,
+      completedCount: completedCount,
+      failedCount: failedCount,
+      waitConfirmCount: waitConfirmCount,
+      inTransitCount: inTransitCount,
+      actionableCount: actionableCount,
+    );
 
     return GestureDetector(
       onTap: onTap,
@@ -108,6 +189,11 @@ class DeliveryOrderCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // ── Header: customer name + status badge ───────────────
+                  // Khi có [currentGroupId], ưu tiên hiển thị group-scoped
+                  // badge (tiến độ của chính nhóm shipper đang phụ trách).
+                  // Order-level badge vẫn giữ ở dưới nhưng kích thước nhỏ hơn
+                  // để shipper không bị nhầm rằng đơn "chưa xong" trong khi
+                  // thực tế nhóm của họ đã hoàn tất.
                   Row(
                     children: [
                       Expanded(
@@ -123,12 +209,34 @@ class DeliveryOrderCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      DeliveryOrderStatusBadge(
-                        status: order.status,
-                        compact: true,
-                      ),
+                      if (groupScopedBadge != null)
+                        groupScopedBadge
+                      else
+                        DeliveryOrderStatusBadge(
+                          status: order.status,
+                          compact: true,
+                        ),
                     ],
                   ),
+                  if (groupScopedBadge != null) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text(
+                          'Đơn: ',
+                          style: AppTypography.bodyRegular1.copyWith(
+                            fontSize: 10,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        DeliveryOrderStatusBadge(
+                          status: order.status,
+                          compact: true,
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 6),
 
                   // ── Address ───────────────────────────────────────────
@@ -193,6 +301,31 @@ class DeliveryOrderCard extends StatelessWidget {
                     const SizedBox(height: 6),
                   ],
 
+                  if (hasItemsInOtherGroups) ...[
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          size: 12,
+                          color: AppColors.neutralMid,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            'Đơn đa nhóm — còn món ở nhóm khác, '
+                            'trạng thái đơn sẽ chốt khi các nhóm đều hoàn tất.',
+                            style: AppTypography.bodyRegular1.copyWith(
+                              fontSize: 11,
+                              color: AppColors.neutralMid,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                  ],
+
                   // ── Meta row: phone + items count ─────────────────────
                   Row(
                     children: [
@@ -217,7 +350,9 @@ class DeliveryOrderCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '${order.totalItems} món',
+                        hasItemsInOtherGroups && totalItemsInGroup > 0
+                            ? '$totalItemsInGroup/${order.totalItems} món'
+                            : '${order.totalItems} món',
                         style: AppTypography.bodyRegular1.copyWith(
                           fontSize: 12,
                           color: AppColors.textSecondary,

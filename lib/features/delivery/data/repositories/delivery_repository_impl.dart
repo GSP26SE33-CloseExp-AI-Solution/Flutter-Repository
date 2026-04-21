@@ -237,6 +237,7 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
     double? startLatitude,
     double? startLongitude,
     String metric = 'distance',
+    bool skipPickupLeg = false,
   }) async {
     if (!await networkInfo.isConnected) {
       return const Left(NetworkFailure());
@@ -248,6 +249,7 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
         startLatitude: startLatitude,
         startLongitude: startLongitude,
         metric: metric,
+        skipPickupLeg: skipPickupLeg,
       );
       return Right(plan);
     } on UnauthorizedException {

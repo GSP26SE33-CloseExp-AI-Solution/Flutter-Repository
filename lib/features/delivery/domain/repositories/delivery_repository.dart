@@ -56,11 +56,15 @@ abstract class DeliveryRepository {
   Future<Either<Failure, DeliveryGroup>> completeDeliveryGroup(String groupId);
 
   /// Tối ưu thứ tự điểm + polyline (BE gọi Mapbox).
+  ///
+  /// [skipPickupLeg]: khi shipper đã lấy hàng, set `true` để BE bỏ Leg A (pickup)
+  /// và chỉ trả về Leg B (siêu thị → khách).
   Future<Either<Failure, DeliveryRoutePlan>> computeDeliveryRoutePlan(
     String groupId, {
     double? startLatitude,
     double? startLongitude,
     String metric = 'distance',
+    bool skipPickupLeg = false,
   });
 
   // ============== DELIVERY ORDERS ==============

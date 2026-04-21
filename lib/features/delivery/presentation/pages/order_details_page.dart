@@ -171,6 +171,18 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     );
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
 
+    final currentGroupId = _resolveCurrentGroupIdForItems(order);
+    final scopedItems = order.items
+        .where((item) => _isItemBelongsToGroup(item, currentGroupId))
+        .toList(growable: false);
+    final scopedCount = scopedItems.length;
+    final otherGroupCount = order.items.length - scopedCount;
+    final hasScopedItems = currentGroupId != null && scopedCount > 0;
+    final allScopedTerminal =
+        hasScopedItems &&
+        scopedItems.every((item) => _isTerminalGroupItem(item));
+    final hasItemsInOtherGroups = currentGroupId != null && otherGroupCount > 0;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       child: Column(
@@ -207,6 +219,15 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                     color: AppColors.textSecondary,
                   ),
                 ),
+                if (hasScopedItems) ...[
+                  const SizedBox(height: 10),
+                  _buildGroupProgressBanner(
+                    scopedCount: scopedCount,
+                    otherGroupCount: otherGroupCount,
+                    allScopedTerminal: allScopedTerminal,
+                    hasItemsInOtherGroups: hasItemsInOtherGroups,
+                  ),
+                ],
               ],
             ),
           ),
@@ -516,7 +537,11 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _SectionTitle('Sản phẩm (${order.totalItems})'),
+                _SectionTitle(
+                  hasItemsInOtherGroups
+                      ? 'Sản phẩm (nhóm bạn: $scopedCount / đơn: ${order.totalItems})'
+                      : 'Sản phẩm (${order.totalItems})',
+                ),
                 const Divider(color: AppColors.cardBorder),
                 ...order.items.map(
                   (item) => _buildItemRow(order, item, currencyFormat),
@@ -761,6 +786,87 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
           fontWeight: FontWeight.w600,
           color: color,
         ),
+      ),
+    );
+  }
+
+  /// Banner giải thích trạng thái của riêng nhóm shipper phụ trách so với
+  /// trạng thái gộp (Order.Status) do BE tính. Giúp shipper không hiểu nhầm
+  /// khi đơn đa siêu thị (đa nhóm) chỉ có một phần thuộc nhóm của mình.
+  Widget _buildGroupProgressBanner({
+    required int scopedCount,
+    required int otherGroupCount,
+    required bool allScopedTerminal,
+    required bool hasItemsInOtherGroups,
+  }) {
+    late final IconData icon;
+    late final Color color;
+    late final String title;
+    late final String description;
+
+    if (allScopedTerminal && hasItemsInOtherGroups) {
+      icon = Icons.check_circle_outline;
+      color = AppColors.successGradientEnd;
+      title = 'Nhóm của bạn đã hoàn tất';
+      description =
+          'Đơn còn $otherGroupCount món ở nhóm khác. Trạng thái đơn sẽ '
+          'chốt khi các nhóm còn lại hoàn tất.';
+    } else if (allScopedTerminal) {
+      icon = Icons.check_circle_outline;
+      color = AppColors.successGradientEnd;
+      title = 'Nhóm của bạn đã hoàn tất';
+      description =
+          'Bạn đã xử lý xong $scopedCount/$scopedCount món thuộc nhóm này.';
+    } else if (hasItemsInOtherGroups) {
+      icon = Icons.inventory_2_outlined;
+      color = AppColors.accent;
+      title = 'Đơn đa nhóm giao';
+      description =
+          'Nhóm của bạn phụ trách $scopedCount món; còn $otherGroupCount '
+          'món thuộc nhóm khác (đơn đa siêu thị).';
+    } else {
+      icon = Icons.local_shipping_outlined;
+      color = AppColors.primaryGradientStart;
+      title = 'Đang xử lý nhóm này';
+      description = 'Nhóm của bạn có $scopedCount món cần giao.';
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: color),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTypography.header3.copyWith(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: color,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  description,
+                  style: AppTypography.bodyRegular1.copyWith(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
