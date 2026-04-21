@@ -432,6 +432,7 @@ class _GroupDetailsContent extends StatelessWidget {
                   ),
                 DeliveryOrderCard(
                   order: order,
+                  currentGroupId: group.deliveryGroupId,
                   onTap: () => context.push(
                     Routes.deliveryOrderDetails(
                       order.orderId,

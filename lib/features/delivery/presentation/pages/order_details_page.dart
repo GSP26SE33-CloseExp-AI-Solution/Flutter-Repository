@@ -519,7 +519,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                 _SectionTitle('Sản phẩm (${order.totalItems})'),
                 const Divider(color: AppColors.cardBorder),
                 ...order.items.map(
-                  (item) => _buildItemRow(item, currencyFormat),
+                  (item) => _buildItemRow(order, item, currencyFormat),
                 ),
                 const Divider(color: AppColors.cardBorder),
 
@@ -606,7 +606,14 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     );
   }
 
-  Widget _buildItemRow(DeliveryOrderItem item, NumberFormat fmt) {
+  Widget _buildItemRow(
+    DeliveryOrder order,
+    DeliveryOrderItem item,
+    NumberFormat fmt,
+  ) {
+    final groupId = _resolveCurrentGroupIdForItems(order);
+    final belongsToCurrentGroup = _isItemBelongsToGroup(item, groupId);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -650,6 +657,29 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                     color: AppColors.textSecondary,
                   ),
                 ),
+                const SizedBox(height: 6),
+                Text(
+                  'Trạng thái:',
+                  style: AppTypography.bodyRegular1.copyWith(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    _buildPackagingStatusBadge(item),
+                    _buildItemDeliveryStatusBadge(item),
+                    if (!belongsToCurrentGroup)
+                      _buildMetaStatusBadge(
+                        text: 'Khác nhóm giao',
+                        color: AppColors.neutralMid,
+                      ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -663,6 +693,74 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPackagingStatusBadge(DeliveryOrderItem item) {
+    if (item.isPackagingCompleted) {
+      return _buildMetaStatusBadge(
+        text: 'Đã đóng gói',
+        color: AppColors.successGradientEnd,
+      );
+    }
+
+    return _buildMetaStatusBadge(
+      text: 'Chưa đóng gói',
+      color: AppColors.accent,
+    );
+  }
+
+  Widget _buildItemDeliveryStatusBadge(DeliveryOrderItem item) {
+    final status = (item.deliveryStatus ?? '').trim().toLowerCase().replaceAll(
+      '_',
+      '',
+    );
+
+    switch (status) {
+      case 'completed':
+        return _buildMetaStatusBadge(
+          text: 'Đã giao',
+          color: AppColors.successGradientEnd,
+        );
+      case 'failed':
+        return _buildMetaStatusBadge(
+          text: 'Giao thất bại',
+          color: AppColors.error,
+        );
+      case 'deliveredwaitconfirm':
+        return _buildMetaStatusBadge(
+          text: 'Chờ xác nhận',
+          color: AppColors.statusInTransit,
+        );
+      case 'intransit':
+      case 'pickedup':
+        return _buildMetaStatusBadge(
+          text: 'Đang vận chuyển',
+          color: AppColors.statusDeliveryLeg,
+        );
+      default:
+        return _buildMetaStatusBadge(
+          text: 'Sẵn sàng giao',
+          color: AppColors.primaryGradientStart,
+        );
+    }
+  }
+
+  Widget _buildMetaStatusBadge({required String text, required Color color}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        text,
+        style: AppTypography.bodyRegular1.copyWith(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
       ),
     );
   }

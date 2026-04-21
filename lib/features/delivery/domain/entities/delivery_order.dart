@@ -24,7 +24,7 @@ class DeliveryOrder extends Equatable {
   /// Pickup: maps from BE `collectionPointName` (CollectionPoint.Name)
   final String? pickupPointName;
 
-  /// Not returned by BE in DeliveryOrderResponseDto (always null from API)
+  /// Pickup address from BE `addressLine` (CollectionPoint.AddressLine)
   final String? pickupPointAddress;
   final String? deliveryNote;
   final String timeSlotDisplay;

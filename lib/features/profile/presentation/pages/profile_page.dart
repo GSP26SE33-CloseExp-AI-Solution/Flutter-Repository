@@ -365,159 +365,160 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ],
           ),
-          body: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceWhite,
-                border: Border.all(color: AppColors.cardBorder),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      InkWell(
-                        onTap: isAvatarBusy ? null : _showAvatarPickerSheet,
-                        borderRadius: BorderRadius.circular(28),
-                        child: Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            CircleAvatar(
-                              radius: 24,
-                              backgroundColor: AppColors.avatarBackground,
-                              backgroundImage: avatarImageProvider,
-                              child: avatarImageProvider == null
-                                  ? Text(
-                                      user?.fullName.isNotEmpty == true
-                                          ? user!.fullName[0].toUpperCase()
-                                          : 'D',
-                                      style: AppTypography.subHeader.copyWith(
-                                        fontSize: 18,
-                                        color: AppColors.bodyOnSurface,
-                                      ),
-                                    )
-                                  : null,
-                            ),
-                            Positioned(
-                              right: -2,
-                              bottom: -2,
-                              child: Container(
-                                width: 20,
-                                height: 20,
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: AppColors.surfaceWhite,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                child: isAvatarBusy
-                                    ? const Padding(
-                                        padding: EdgeInsets.all(4),
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 1.6,
-                                          color: Colors.white,
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceWhite,
+                  border: Border.all(color: AppColors.cardBorder),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        InkWell(
+                          onTap: isAvatarBusy ? null : _showAvatarPickerSheet,
+                          borderRadius: BorderRadius.circular(28),
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              CircleAvatar(
+                                radius: 24,
+                                backgroundColor: AppColors.avatarBackground,
+                                backgroundImage: avatarImageProvider,
+                                child: avatarImageProvider == null
+                                    ? Text(
+                                        user?.fullName.isNotEmpty == true
+                                            ? user!.fullName[0].toUpperCase()
+                                            : 'D',
+                                        style: AppTypography.subHeader.copyWith(
+                                          fontSize: 18,
+                                          color: AppColors.bodyOnSurface,
                                         ),
                                       )
-                                    : const Icon(
-                                        Icons.camera_alt_outlined,
-                                        size: 12,
-                                        color: Colors.white,
-                                      ),
+                                    : null,
                               ),
-                            ),
-                          ],
+                              Positioned(
+                                right: -2,
+                                bottom: -2,
+                                child: Container(
+                                  width: 20,
+                                  height: 20,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: AppColors.surfaceWhite,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  child: isAvatarBusy
+                                      ? const Padding(
+                                          padding: EdgeInsets.all(4),
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 1.6,
+                                            color: Colors.white,
+                                          ),
+                                        )
+                                      : const Icon(
+                                          Icons.camera_alt_outlined,
+                                          size: 12,
+                                          color: Colors.white,
+                                        ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                user?.fullName ?? 'Delivery Staff',
+                                style: AppTypography.header2.copyWith(
+                                  fontFamily: 'DM Sans',
+                                  fontSize: 16,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                user?.roleName ?? '',
+                                style: AppTypography.bodyRegular1.copyWith(
+                                  fontSize: 13,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 24, color: AppColors.cardBorder),
+                    if (user?.email != null && user!.email.isNotEmpty)
+                      _InfoRow(
+                        icon: Icons.email_outlined,
+                        label: 'Email',
+                        value: user.email,
+                      ),
+                    if (user?.phone != null && user!.phone.isNotEmpty)
+                      _InfoRow(
+                        icon: Icons.phone_outlined,
+                        label: 'Số điện thoại',
+                        value: user.phone,
+                      ),
+                    const SizedBox(height: 14),
+                    const Divider(color: AppColors.cardBorder),
+                    const SizedBox(height: 6),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      onTap: () => context.push(Routes.notifications),
+                      leading: const Icon(
+                        Icons.notifications_active_outlined,
+                        color: AppColors.primary,
+                      ),
+                      title: Text(
+                        'Trung tâm thông báo',
+                        style: AppTypography.subHeader.copyWith(
+                          color: AppColors.neutralDark,
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              user?.fullName ?? 'Delivery Staff',
-                              style: AppTypography.header2.copyWith(
-                                fontFamily: 'DM Sans',
-                                fontSize: 16,
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              user?.roleName ?? '',
-                              style: AppTypography.bodyRegular1.copyWith(
-                                fontSize: 13,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Divider(height: 24, color: AppColors.cardBorder),
-                  if (user?.email != null && user!.email.isNotEmpty)
-                    _InfoRow(
-                      icon: Icons.email_outlined,
-                      label: 'Email',
-                      value: user.email,
-                    ),
-                  if (user?.phone != null && user!.phone.isNotEmpty)
-                    _InfoRow(
-                      icon: Icons.phone_outlined,
-                      label: 'Số điện thoại',
-                      value: user.phone,
-                    ),
-                  const SizedBox(height: 14),
-                  const Divider(color: AppColors.cardBorder),
-                  const SizedBox(height: 6),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    onTap: () => context.push(Routes.notifications),
-                    leading: const Icon(
-                      Icons.notifications_active_outlined,
-                      color: AppColors.primary,
-                    ),
-                    title: Text(
-                      'Trung tâm thông báo',
-                      style: AppTypography.subHeader.copyWith(
-                        color: AppColors.neutralDark,
+                      subtitle:
+                          BlocBuilder<NotificationsBloc, NotificationsState>(
+                            builder: (context, notificationState) {
+                              final unreadCount = _resolveUnreadCount(
+                                notificationState,
+                              );
+                              return Text(
+                                unreadCount > 0
+                                    ? 'Bạn có $unreadCount thông báo chưa đọc'
+                                    : 'Không có thông báo chưa đọc',
+                                style: AppTypography.bodyRegular1.copyWith(
+                                  color: AppColors.textSecondary,
+                                ),
+                              );
+                            },
+                          ),
+                      trailing: const Icon(
+                        Icons.chevron_right,
+                        color: AppColors.neutralMid,
                       ),
                     ),
-                    subtitle:
-                        BlocBuilder<NotificationsBloc, NotificationsState>(
-                          builder: (context, notificationState) {
-                            final unreadCount = _resolveUnreadCount(
-                              notificationState,
-                            );
-                            return Text(
-                              unreadCount > 0
-                                  ? 'Bạn có $unreadCount thông báo chưa đọc'
-                                  : 'Không có thông báo chưa đọc',
-                              style: AppTypography.bodyRegular1.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
-                            );
-                          },
-                        ),
-                    trailing: const Icon(
-                      Icons.chevron_right,
-                      color: AppColors.neutralMid,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

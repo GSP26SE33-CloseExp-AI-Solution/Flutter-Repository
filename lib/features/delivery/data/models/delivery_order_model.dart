@@ -47,8 +47,8 @@ class DeliveryOrderModel extends DeliveryOrder {
       deliveryAddress: json['addressLine'] as String?,
       // BE field: collectionPointName — was 'pickupPointName' (wrong)
       pickupPointName: json['collectionPointName'] as String?,
-      // BE has no separate collectionPointAddress in DeliveryOrderResponseDto
-      pickupPointAddress: null,
+      // BE uses a shared field addressLine for both delivery address and pickup collection address.
+      pickupPointAddress: json['addressLine'] as String?,
       deliveryNote: json['deliveryNote'] as String?,
       timeSlotDisplay: json['timeSlotDisplay'] as String? ?? '',
       totalItems: json['totalItems'] as int? ?? 0,
