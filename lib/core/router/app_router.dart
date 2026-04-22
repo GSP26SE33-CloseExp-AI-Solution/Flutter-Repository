@@ -159,9 +159,22 @@ class AppRouter {
           builder: (context, state) {
             final orderId = state.pathParameters['orderId']!;
             final groupId = state.uri.queryParameters['groupId'];
+            final routeOrderRaw = state.uri.queryParameters['routeOrder'];
+            List<String>? routeOrderedOrderIds;
+            if (routeOrderRaw != null && routeOrderRaw.trim().isNotEmpty) {
+              routeOrderedOrderIds = routeOrderRaw
+                  .split(',')
+                  .map((s) => s.trim())
+                  .where((s) => s.isNotEmpty)
+                  .toList(growable: false);
+            }
             return BlocProvider(
               create: (_) => sl<DeliveryBloc>(),
-              child: OrderDetailsPage(orderId: orderId, groupId: groupId),
+              child: OrderDetailsPage(
+                orderId: orderId,
+                groupId: groupId,
+                routeOrderedOrderIds: routeOrderedOrderIds,
+              ),
             );
           },
         ),
@@ -240,10 +253,23 @@ class Routes {
   // Helper methods for parameterized routes
   static String deliveryGroupDetails(String groupId) =>
       '/delivery/group/$groupId';
-  static String deliveryOrderDetails(String orderId, {String? groupId}) {
+  static String deliveryOrderDetails(
+    String orderId, {
+    String? groupId,
+    List<String>? routeOrderedOrderIds,
+  }) {
     final base = '/delivery/order/$orderId';
-    if (groupId == null || groupId.trim().isEmpty) return base;
-    return '$base?groupId=${Uri.encodeComponent(groupId.trim())}';
+    final qp = <String>[];
+    if (groupId != null && groupId.trim().isNotEmpty) {
+      qp.add('groupId=${Uri.encodeComponent(groupId.trim())}');
+    }
+    if (routeOrderedOrderIds != null && routeOrderedOrderIds.isNotEmpty) {
+      qp.add(
+        'routeOrder=${Uri.encodeComponent(routeOrderedOrderIds.join(','))}',
+      );
+    }
+    if (qp.isEmpty) return base;
+    return '$base?${qp.join('&')}';
   }
 
   static String notificationThread(String orderId) =>

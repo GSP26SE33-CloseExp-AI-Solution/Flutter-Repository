@@ -70,7 +70,10 @@ abstract class DeliveryRepository {
   // ============== DELIVERY ORDERS ==============
 
   /// Get order details for delivery
-  Future<Either<Failure, DeliveryOrder>> getOrderDetails(String orderId);
+  Future<Either<Failure, DeliveryOrder>> getOrderDetails(
+    String orderId, {
+    String? groupId,
+  });
 
   /// Upload ảnh chứng minh — BE `POST /delivery/orders/{id}/proof-image` (field `file`).
   Future<Either<Failure, String>> uploadDeliveryProofImage(
@@ -84,6 +87,7 @@ abstract class DeliveryRepository {
     required String proofImageUrl,
     required String verificationCode,
     String? notes,
+    String? deliveryGroupId,
   });
 
   /// Report delivery failure
@@ -92,6 +96,7 @@ abstract class DeliveryRepository {
     required String failureReason,
     String? notes,
     List<String>? orderItemIds,
+    String? deliveryGroupId,
   });
 
   // ============== HISTORY & STATS ==============

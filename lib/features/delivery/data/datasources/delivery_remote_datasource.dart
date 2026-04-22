@@ -50,7 +50,9 @@ abstract class DeliveryRemoteDataSource {
   });
 
   // Delivery Orders
-  Future<DeliveryOrderModel> getOrderDetails(String orderId);
+  /// Khi có [groupId], BE sẽ scope item theo đúng nhóm → tránh việc đơn đa-siêu-thị
+  /// trả về item thuộc nhóm khác mà shipper cũng đang sở hữu.
+  Future<DeliveryOrderModel> getOrderDetails(String orderId, {String? groupId});
 
   /// BE: POST multipart `file` → dùng URL trả về cho [confirmDelivery].
   Future<String> uploadDeliveryProofImage(String orderId, String localFilePath);
@@ -61,12 +63,14 @@ abstract class DeliveryRemoteDataSource {
     required String proofImageUrl,
     required String verificationCode,
     String? notes,
+    String? deliveryGroupId,
   });
   Future<DeliveryOrderModel> reportDeliveryFailure(
     String orderId, {
     required String failureReason,
     String? notes,
     List<String>? orderItemIds,
+    String? deliveryGroupId,
   });
 
   // History & Stats
@@ -292,9 +296,20 @@ class DeliveryRemoteDataSourceImpl implements DeliveryRemoteDataSource {
   }
 
   @override
-  Future<DeliveryOrderModel> getOrderDetails(String orderId) async {
+  Future<DeliveryOrderModel> getOrderDetails(
+    String orderId, {
+    String? groupId,
+  }) async {
     try {
-      final response = await _dio.get(ApiConstants.deliveryOrderById(orderId));
+      final trimmedGroupId = groupId?.trim();
+      final queryParameters = <String, dynamic>{};
+      if (trimmedGroupId != null && trimmedGroupId.isNotEmpty) {
+        queryParameters['groupId'] = trimmedGroupId;
+      }
+      final response = await _dio.get(
+        ApiConstants.deliveryOrderById(orderId),
+        queryParameters: queryParameters.isEmpty ? null : queryParameters,
+      );
       return _handleSingleResponse(response, DeliveryOrderModel.fromJson);
     } on DioException {
       rethrow;
@@ -358,12 +373,16 @@ class DeliveryRemoteDataSourceImpl implements DeliveryRemoteDataSource {
     required String proofImageUrl,
     required String verificationCode,
     String? notes,
+    String? deliveryGroupId,
   }) async {
     try {
+      final trimmedGroupId = deliveryGroupId?.trim();
       final data = <String, dynamic>{
         'proofImageUrl': proofImageUrl.trim(),
         'verificationCode': verificationCode.trim(),
         if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
+        if (trimmedGroupId != null && trimmedGroupId.isNotEmpty)
+          'deliveryGroupId': trimmedGroupId,
       };
       final response = await _dio.post(
         ApiConstants.confirmDelivery(orderId),
@@ -384,13 +403,17 @@ class DeliveryRemoteDataSourceImpl implements DeliveryRemoteDataSource {
     required String failureReason,
     String? notes,
     List<String>? orderItemIds,
+    String? deliveryGroupId,
   }) async {
     try {
+      final trimmedGroupId = deliveryGroupId?.trim();
       final payload = <String, dynamic>{
         'failureReason': failureReason,
         if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
         if (orderItemIds != null && orderItemIds.isNotEmpty)
           'orderItemIds': orderItemIds,
+        if (trimmedGroupId != null && trimmedGroupId.isNotEmpty)
+          'deliveryGroupId': trimmedGroupId,
       };
       final response = await _dio.post(
         ApiConstants.reportDeliveryFailure(orderId),

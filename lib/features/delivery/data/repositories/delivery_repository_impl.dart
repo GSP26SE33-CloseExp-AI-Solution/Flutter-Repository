@@ -266,13 +266,19 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
   }
 
   @override
-  Future<Either<Failure, DeliveryOrder>> getOrderDetails(String orderId) async {
+  Future<Either<Failure, DeliveryOrder>> getOrderDetails(
+    String orderId, {
+    String? groupId,
+  }) async {
     if (!await networkInfo.isConnected) {
       return const Left(NetworkFailure());
     }
 
     try {
-      final order = await remoteDataSource.getOrderDetails(orderId);
+      final order = await remoteDataSource.getOrderDetails(
+        orderId,
+        groupId: groupId,
+      );
       return Right(order);
     } on UnauthorizedException {
       return const Left(UnauthorizedFailure());
@@ -321,6 +327,7 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
     required String proofImageUrl,
     required String verificationCode,
     String? notes,
+    String? deliveryGroupId,
   }) async {
     if (!await networkInfo.isConnected) {
       return const Left(NetworkFailure());
@@ -332,6 +339,7 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
         proofImageUrl: proofImageUrl,
         verificationCode: verificationCode,
         notes: notes,
+        deliveryGroupId: deliveryGroupId,
       );
       return Right(order);
     } on UnauthorizedException {
@@ -353,6 +361,7 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
     required String failureReason,
     String? notes,
     List<String>? orderItemIds,
+    String? deliveryGroupId,
   }) async {
     if (!await networkInfo.isConnected) {
       return const Left(NetworkFailure());
@@ -364,6 +373,7 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
         failureReason: failureReason,
         notes: notes,
         orderItemIds: orderItemIds,
+        deliveryGroupId: deliveryGroupId,
       );
       return Right(order);
     } on UnauthorizedException {

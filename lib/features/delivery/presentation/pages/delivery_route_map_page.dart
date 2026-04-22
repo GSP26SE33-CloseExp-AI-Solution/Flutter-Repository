@@ -1275,11 +1275,11 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
             onPressed: () => _handleBackNavigation(context),
           ),
           title: Text(
-                    'Lộ trình giao hàng',
+            'Lộ trình giao hàng',
             style: AppTypography.header1.copyWith(
-                      fontSize: 20,
+              fontSize: 20,
               color: Colors.white,
-                      letterSpacing: -0.60,
+              letterSpacing: -0.60,
             ),
           ),
           actions: [
@@ -1302,8 +1302,8 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
                 },
                 icon: const Icon(
                   Icons.assignment_outlined,
-                      color: Colors.white,
-                    ),
+                  color: Colors.white,
+                ),
                 label: Text(
                   'Nhóm giao',
                   style: AppTypography.bodyRegular1.copyWith(
@@ -1318,7 +1318,7 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
           children: [
             Positioned.fill(child: _buildMapLayer()),
             if (kDebugMode && _mapRenderStalled)
-          Positioned(
+              Positioned(
                 left: 16,
                 right: 16,
                 top: 16,
@@ -1354,30 +1354,30 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
             duration: const Duration(milliseconds: 220),
             curve: Curves.easeOut,
             height: _controlsExpanded ? 330 : 125,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                border: Border(top: BorderSide(color: AppColors.cardBorder)),
-              ),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(top: BorderSide(color: AppColors.cardBorder)),
+            ),
             child: ClipRect(
               child: SingleChildScrollView(
                 physics: _controlsExpanded
                     ? const BouncingScrollPhysics()
                     : const NeverScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Row(
                       children: [
                         Expanded(
                           child: Text(
-                    'Chọn lộ trình',
-                    style: AppTypography.header3.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
+                            'Chọn lộ trình',
+                            style: AppTypography.header3.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
                         ),
                         IconButton(
                           visualDensity: VisualDensity.compact,
@@ -1427,8 +1427,8 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
                       ),
                     ),
                     if (_resolvingShipperLocation) ...[
-                    const SizedBox(height: 4),
-                    Text(
+                      const SizedBox(height: 4),
+                      Text(
                         'Đang lấy vị trí hiện tại của shipper...',
                         style: AppTypography.bodyRegular1.copyWith(
                           fontSize: 11,
@@ -1478,12 +1478,12 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
                         const SizedBox(height: 4),
                         Text(
                           'Nhóm: ${widget.groupId!.trim()}',
-                      style: AppTypography.bodyRegular1.copyWith(
-                        fontSize: 12,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
+                          style: AppTypography.bodyRegular1.copyWith(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
                       if (_loadError != null) ...[
                         const SizedBox(height: 8),
                         Text(
@@ -1560,12 +1560,12 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
                           ],
                         ),
                       ],
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _RouteOption(
-                          title: 'Tối ưu',
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _RouteOption(
+                              title: 'Tối ưu',
                               subtitle: _metric == 'distance'
                                   ? distanceSubtitle
                                   : 'Chạm để tối thiểu km',
@@ -1574,12 +1574,12 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
                                   MapboxConfig.isConfigured && _hasValidGroupId
                                   ? () => _onMetricSelected('distance')
                                   : null,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
                           Expanded(
-                        child: _RouteOption(
-                          title: 'Nhanh nhất',
+                            child: _RouteOption(
+                              title: 'Nhanh nhất',
                               subtitle: _metric == 'duration'
                                   ? durationSubtitle
                                   : 'Chạm để tối thiểu phút',
@@ -1588,11 +1588,11 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
                                   MapboxConfig.isConfigured && _hasValidGroupId
                                   ? () => _onMetricSelected('duration')
                                   : null,
-                        ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
+                      const SizedBox(height: 12),
                       if (isGroupFinalized)
                         Container(
                           width: double.infinity,
@@ -1614,11 +1614,11 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
                           ),
                         )
                       else
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
+                        SizedBox(
+                          width: double.infinity,
+                          height: 56,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 colors: _isGroupComplete()
                                     ? [
@@ -1626,12 +1626,12 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
                                         AppColors.successGradientEnd,
                                       ]
                                     : [
-                            AppColors.headerGradientStart,
-                            AppColors.headerGradientEnd,
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
+                                        AppColors.headerGradientStart,
+                                        AppColors.headerGradientEnd,
+                                      ],
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
                             child: BlocBuilder<DeliveryBloc, DeliveryState>(
                               builder: (context, state) {
                                 final isLoadingComplete =
@@ -1656,25 +1656,25 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
                                         : Icons.play_arrow,
                                     color: Colors.white,
                                   ),
-                        label: Text(
+                                  label: Text(
                                     _isGroupComplete()
                                         ? 'Hoàn thành nhóm giao'
                                         : 'Bắt đầu giao hàng',
-                          style: AppTypography.subHeader.copyWith(
-                            color: Colors.white,
-                            fontSize: 16,
-                          ),
-                        ),
+                                    style: AppTypography.subHeader.copyWith(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                    ),
+                                  ),
                                 );
                               },
-                      ),
-                    ),
-                  ),
+                            ),
+                          ),
+                        ),
                     ],
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
           ),
         ),
       ),
@@ -1887,8 +1887,15 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
       );
     }
 
+    final planIds = _plan?.orderedOrderIds;
     await context.push(
-      Routes.deliveryOrderDetails(nextOrderId, groupId: groupId),
+      Routes.deliveryOrderDetails(
+        nextOrderId,
+        groupId: groupId,
+        routeOrderedOrderIds: (planIds != null && planIds.isNotEmpty)
+            ? List<String>.from(planIds)
+            : null,
+      ),
     );
 
     // When returning from order flow, reload group + route-plan to keep
@@ -2131,8 +2138,7 @@ class _RouteLegsSummary extends StatelessWidget {
             title: 'Chặng A • Shipper → Siêu thị',
             summary: pickupLeg!.summaryLabel,
           ),
-        if (pickupLeg != null && deliveryLeg != null)
-          const SizedBox(height: 6),
+        if (pickupLeg != null && deliveryLeg != null) const SizedBox(height: 6),
         if (deliveryLeg != null)
           _LegRow(
             color: const Color(0xFFE53935),
@@ -2205,10 +2211,7 @@ class _LegRow extends StatelessWidget {
         Container(
           width: 10,
           height: 10,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 8),
         Expanded(
@@ -2299,44 +2302,44 @@ class _RouteOption extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: borderColor),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.alt_route,
-            size: 16,
-            color: isActive
-                ? AppColors.headerGradientEnd
-                : AppColors.textSecondary,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: borderColor),
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppTypography.header3.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
-                  ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.alt_route,
+                size: 16,
+                color: isActive
+                    ? AppColors.headerGradientEnd
+                    : AppColors.textSecondary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: AppTypography.header3.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: AppTypography.bodyRegular1.copyWith(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: AppTypography.bodyRegular1.copyWith(
-                    fontSize: 12,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+              ),
+            ],
           ),
         ),
       ),

@@ -1,3 +1,5 @@
+import 'dart:async' show unawaited;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -8,25 +10,37 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/constants/app_icons.dart';
 import '../../../../core/router/app_router.dart';
+import '../../../../injection_container.dart' show sl;
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_event.dart';
 import '../../domain/entities/delivery_group.dart';
 import '../../domain/entities/delivery_order.dart';
+import '../../domain/repositories/delivery_repository.dart';
+import '../../domain/services/shipper_location_service.dart';
 import '../bloc/delivery_bloc.dart';
 import '../bloc/delivery_event.dart';
 import '../bloc/delivery_state.dart';
 import '../widgets/delivery_failure_sheet.dart';
 import '../widgets/qr_scan_modal.dart';
 import '../widgets/widgets.dart';
+import '../utils/delivery_route_order_utils.dart';
 
 /// Screen 4 — Order Details: individual order for delivery.
 class OrderDetailsPage extends StatefulWidget {
   final String orderId;
   final String? groupId;
 
-  const OrderDetailsPage({super.key, required this.orderId, this.groupId});
+  /// Thứ tự điểm dừng từ route map (`orderedOrderIds`); có thể null nếu mở từ màn khác.
+  final List<String>? routeOrderedOrderIds;
+
+  const OrderDetailsPage({
+    super.key,
+    required this.orderId,
+    this.groupId,
+    this.routeOrderedOrderIds,
+  });
 
   @override
   State<OrderDetailsPage> createState() => _OrderDetailsPageState();
@@ -35,23 +49,94 @@ class OrderDetailsPage extends StatefulWidget {
 class _OrderDetailsPageState extends State<OrderDetailsPage> {
   final _imagePicker = ImagePicker();
 
+  /// Luôn tái tính sau mỗi lần refresh nhóm (sau confirm/fail) để khớp lộ trình hiện tại.
+  List<String>? _liveRouteOrderIds;
+
   @override
   void initState() {
     super.initState();
+    final ro = widget.routeOrderedOrderIds;
+    if (ro != null && ro.isNotEmpty) {
+      _liveRouteOrderIds = List<String>.from(ro);
+    }
     _loadOrderDetails();
   }
 
   void _loadOrderDetails() {
-    context.read<DeliveryBloc>().add(LoadOrderDetails(orderId: widget.orderId));
+    context.read<DeliveryBloc>().add(
+      LoadOrderDetails(orderId: widget.orderId, groupId: widget.groupId),
+    );
+  }
+
+  /// Nhóm giao gửi kèm confirm/fail — ưu tiên `groupId` từ route (bản đồ),
+  /// fallback `order.deliveryGroupId` từ GET chi tiết.
+  String? _resolveDeliveryGroupIdForActions(DeliveryOrder order) {
+    final routeGid = widget.groupId?.trim();
+    if (routeGid != null && routeGid.isNotEmpty) {
+      return routeGid;
+    }
+    final fromOrder = order.deliveryGroupId?.trim();
+    if (fromOrder != null && fromOrder.isNotEmpty) {
+      return fromOrder;
+    }
+    return null;
   }
 
   String? _findNextActionableOrderId(DeliveryGroup group) {
-    for (final order in group.orders) {
+    final ordered = sortDeliveryOrdersByRouteStopIds(
+      group.orders,
+      _liveRouteOrderIds ?? widget.routeOrderedOrderIds,
+    );
+    for (final order in ordered) {
       if (_hasActionableItemsForCurrentGroup(order)) {
         return order.orderId;
       }
     }
     return null;
+  }
+
+  Future<void> _refreshLiveRouteOrderIds(String groupId, DeliveryGroup g) async {
+    final ids = await fetchRouteStopOrderIdsForGroup(
+      groupId: groupId,
+      repository: sl<DeliveryRepository>(),
+      shipperLocationService: sl<ShipperLocationService>(),
+      groupCenterLatitude: g.centerLatitude,
+      groupCenterLongitude: g.centerLongitude,
+    );
+    if (!mounted) return;
+    if (ids != null && ids.isNotEmpty) {
+      setState(() => _liveRouteOrderIds = ids);
+    }
+  }
+
+  Future<void> _handlePostRefreshGroupNavigation(DeliveryGroup group) async {
+    final gid = widget.groupId?.trim();
+    final effectiveGroupId =
+        (gid != null && gid.isNotEmpty) ? gid : group.deliveryGroupId.trim();
+    if (effectiveGroupId.isNotEmpty) {
+      await _refreshLiveRouteOrderIds(effectiveGroupId, group);
+    }
+    if (!mounted) return;
+    final nextOrderId = _findNextActionableOrderId(group);
+    final routeIds = _liveRouteOrderIds ?? widget.routeOrderedOrderIds;
+    if (nextOrderId != null) {
+      context.pop();
+      context.push(
+        Routes.deliveryOrderDetails(
+          nextOrderId,
+          groupId: effectiveGroupId.isNotEmpty ? effectiveGroupId : null,
+          routeOrderedOrderIds: routeIds,
+        ),
+      );
+    } else {
+      context.pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Tất cả đơn hàng đã được xử lý'),
+          backgroundColor: AppColors.successGradientEnd,
+        ),
+      );
+    }
   }
 
   void _onOrderActionSuccess(String actionType) {
@@ -92,24 +177,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
           } else if (state is DeliveryFailureReported) {
             _onOrderActionSuccess('failure');
           } else if (state is GroupDetailsLoaded) {
-            // Auto-navigate to next actionable order after group refresh
-            final nextOrderId = _findNextActionableOrderId(state.group);
-            if (nextOrderId != null) {
-              final groupId = widget.groupId?.trim();
-              context.pop();
-              context.push(
-                Routes.deliveryOrderDetails(nextOrderId, groupId: groupId),
-              );
-            } else {
-              // No more actionable orders
-              context.pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Tất cả đơn hàng đã được xử lý'),
-                  backgroundColor: AppColors.successGradientEnd,
-                ),
-              );
-            }
+            unawaited(_handlePostRefreshGroupNavigation(state.group));
           } else if (state is DeliveryError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -1044,7 +1112,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     context.read<DeliveryBloc>().add(
       ConfirmDelivery(
         orderId: order.orderId,
-        deliveryGroupId: order.deliveryGroupId,
+        deliveryGroupId: _resolveDeliveryGroupIdForActions(order),
         proofImagePath: picked.path,
         verificationCode: verification,
         notes: 'Xác nhận bằng QR',
@@ -1079,7 +1147,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     context.read<DeliveryBloc>().add(
       ReportDeliveryFailure(
         orderId: order.orderId,
-        deliveryGroupId: order.deliveryGroupId,
+        deliveryGroupId: _resolveDeliveryGroupIdForActions(order),
         failureReason: result.reason,
         notes: result.notes,
         orderItemIds: eligibleOrderItemIds,

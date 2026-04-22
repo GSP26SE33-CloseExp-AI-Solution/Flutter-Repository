@@ -103,10 +103,15 @@ class LoadGroupDetails extends DeliveryEvent {
 class LoadOrderDetails extends DeliveryEvent {
   final String orderId;
 
-  const LoadOrderDetails({required this.orderId});
+  /// Khi app đang đứng trong context 1 nhóm giao cụ thể (vd. route-map),
+  /// truyền [groupId] để BE scope item theo đúng nhóm → tránh đơn đa-siêu-thị
+  /// trả về item của nhóm khác mà cùng shipper cũng đang sở hữu.
+  final String? groupId;
+
+  const LoadOrderDetails({required this.orderId, this.groupId});
 
   @override
-  List<Object?> get props => [orderId];
+  List<Object?> get props => [orderId, groupId];
 }
 
 /// Refresh delivery group details (reload from API after order action)

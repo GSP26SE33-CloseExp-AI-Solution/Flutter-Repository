@@ -184,7 +184,10 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
   ) async {
     emit(const DeliveryLoading(message: 'Đang tải thông tin đơn hàng...'));
 
-    final result = await _repository.getOrderDetails(event.orderId);
+    final result = await _repository.getOrderDetails(
+      event.orderId,
+      groupId: event.groupId,
+    );
 
     result.fold(
       (failure) => _emitFailure(failure, emit, isAction: false),
@@ -373,11 +376,16 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
       proofImageUrl: proofUrl,
       verificationCode: verification,
       notes: event.notes,
+      deliveryGroupId: event.deliveryGroupId,
     );
 
     result.fold(
       (failure) => _emitFailure(failure, emit, isAction: true),
-      (order) => emit(DeliveryConfirmed(order: order)),
+      (order) {
+        emit(DeliveryConfirmed(order: order));
+        // Tránh màn hình trắng / giữ UI đồng bộ ngay sau confirm (trước khi refresh nhóm).
+        emit(OrderDetailsLoaded(order: order));
+      },
     );
   }
 
@@ -392,11 +400,15 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
       failureReason: event.failureReason,
       notes: event.notes,
       orderItemIds: event.orderItemIds,
+      deliveryGroupId: event.deliveryGroupId,
     );
 
     result.fold(
       (failure) => _emitFailure(failure, emit, isAction: true),
-      (order) => emit(DeliveryFailureReported(order: order)),
+      (order) {
+        emit(DeliveryFailureReported(order: order));
+        emit(OrderDetailsLoaded(order: order));
+      },
     );
   }
 

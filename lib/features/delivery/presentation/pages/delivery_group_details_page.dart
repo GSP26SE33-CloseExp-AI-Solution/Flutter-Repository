@@ -1,17 +1,23 @@
+import 'dart:async' show unawaited;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/router/app_router.dart';
+import '../../../../injection_container.dart' show sl;
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../domain/entities/delivery_group.dart';
 import '../../domain/entities/delivery_order.dart';
+import '../../domain/repositories/delivery_repository.dart';
+import '../../domain/services/shipper_location_service.dart';
 import '../bloc/delivery_bloc.dart';
 import '../bloc/delivery_event.dart';
 import '../bloc/delivery_state.dart';
 import '../widgets/widgets.dart';
+import '../utils/delivery_route_order_utils.dart';
 
 /// Screen 3 — Delivery Group Details: order list at a delivery point.
 class DeliveryGroupDetailsPage extends StatefulWidget {
@@ -26,6 +32,9 @@ class DeliveryGroupDetailsPage extends StatefulWidget {
 
 class _DeliveryGroupDetailsPageState extends State<DeliveryGroupDetailsPage> {
   String? _pendingMapGroupId;
+
+  /// Thứ tự điểm dừng theo route-plan (đồng bộ với route map).
+  List<String>? _routeStopOrderIds;
 
   @override
   void initState() {
@@ -99,6 +108,8 @@ class _DeliveryGroupDetailsPageState extends State<DeliveryGroupDetailsPage> {
       context.pop();
     } else if (state is DeliveryConfirmed || state is DeliveryFailureReported) {
       _loadGroupDetails();
+    } else if (state is GroupDetailsLoaded) {
+      unawaited(_syncRouteStopOrderIds(state.group));
     } else if (state is DeliveryError) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -118,12 +129,29 @@ class _DeliveryGroupDetailsPageState extends State<DeliveryGroupDetailsPage> {
     }
   }
 
+  Future<void> _syncRouteStopOrderIds(DeliveryGroup group) async {
+    final gid = group.deliveryGroupId.trim();
+    if (gid.isEmpty) return;
+    final ids = await fetchRouteStopOrderIdsForGroup(
+      groupId: gid,
+      repository: sl<DeliveryRepository>(),
+      shipperLocationService: sl<ShipperLocationService>(),
+      groupCenterLatitude: group.centerLatitude,
+      groupCenterLongitude: group.centerLongitude,
+    );
+    if (!mounted) return;
+    if (ids != null && ids.isNotEmpty) {
+      setState(() => _routeStopOrderIds = ids);
+    }
+  }
+
   Widget _buildBody(BuildContext context, DeliveryState state) {
     if (state is DeliveryLoading) return const DeliveryLoadingState();
 
     if (state is GroupDetailsLoaded) {
       return _GroupDetailsContent(
         group: state.group,
+        routeStopOrderIds: _routeStopOrderIds,
         onRefresh: _loadGroupDetails,
         onStartDelivery: _handleStartDelivery,
         onCompleteGroup: _handleCompleteGroup,
@@ -180,12 +208,14 @@ class _DeliveryGroupDetailsPageState extends State<DeliveryGroupDetailsPage> {
 
 class _GroupDetailsContent extends StatelessWidget {
   final DeliveryGroup group;
+  final List<String>? routeStopOrderIds;
   final VoidCallback onRefresh;
   final void Function(DeliveryGroup) onStartDelivery;
   final void Function(DeliveryGroup) onCompleteGroup;
 
   const _GroupDetailsContent({
     required this.group,
+    required this.routeStopOrderIds,
     required this.onRefresh,
     required this.onStartDelivery,
     required this.onCompleteGroup,
@@ -386,7 +416,10 @@ class _GroupDetailsContent extends StatelessWidget {
   }
 
   Widget _buildOrdersSection(BuildContext context) {
-    final sortedOrders = _sortedOrdersByPendingItemsDesc();
+    final sortedOrders = sortDeliveryOrdersByRouteStopIds(
+      group.orders,
+      routeStopOrderIds,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -437,6 +470,7 @@ class _GroupDetailsContent extends StatelessWidget {
                     Routes.deliveryOrderDetails(
                       order.orderId,
                       groupId: group.deliveryGroupId,
+                      routeOrderedOrderIds: routeStopOrderIds,
                     ),
                   ),
                 ),
@@ -490,16 +524,6 @@ class _GroupDetailsContent extends StatelessWidget {
         .where((item) => _isItemBelongsToGroup(item, group.deliveryGroupId))
         .where((item) => item.isPackagingCompleted)
         .toList();
-  }
-
-  List<DeliveryOrder> _sortedOrdersByPendingItemsDesc() {
-    final sorted = List<DeliveryOrder>.from(group.orders);
-    sorted.sort((a, b) {
-      final bPending = _countPendingGroupItemsForOrder(b);
-      final aPending = _countPendingGroupItemsForOrder(a);
-      return bPending.compareTo(aPending);
-    });
-    return sorted;
   }
 
   int _countPendingGroupItemsForOrder(DeliveryOrder order) {
