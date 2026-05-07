@@ -5,14 +5,14 @@ class AppColors {
   AppColors._();
 
   // ── Primary ───────────────────────────────────────────────────────────────
-  static const primary = Color(0xFFFE554A);
-  static const primaryGradientStart = Color(0xFFF9881F);
-  static const primaryGradientEnd = Color(0xFFFF774C);
-  static const accent = Color(0xFF0B735F);
+  static const primary = Color(0xFF1B5E20);
+  static const primaryGradientStart = Color(0xFF1B5E20);
+  static const primaryGradientEnd = Color(0xFF2E7D32);
+  static const accent = Color(0xFF2E7D32);
 
   // ── Header gradient — screen headers, AppBar overlays, featured sections ──
-  static const headerGradientStart = Color(0xFFFF6800);
-  static const headerGradientEnd = Color(0xFFFA2B36);
+  static const headerGradientStart = Color(0xFF1B5E20);
+  static const headerGradientEnd = Color(0xFF2E7D32);
 
   // ── Success gradient — QR confirm, delivery success states ────────────────
   static const successGradientStart = Color(0xFF00C850);
@@ -29,6 +29,13 @@ class AppColors {
 
   /// Muted grey for labels, secondary info
   static const textSecondary = Color(0xFF697282);
+
+  /// Text/icons on primary or dark surfaces
+  static const onPrimary = Color(0xFFFFFFFF);
+
+  /// Input label and hint colors
+  static const inputLabel = Color(0xFF3C3C3C);
+  static const inputHint = Color(0xFFA9ABAE);
 
   // ── Surface ───────────────────────────────────────────────────────────────
   static const surfaceWhite = Color(0xFFFCFCFC);
@@ -49,8 +56,14 @@ class AppColors {
   /// Background for notification metadata chips
   static const notificationMetaChipBackground = Color(0xFFF5F7FB);
 
+  /// Overlay + shadow helpers
+  static const scrimStrong = Color(0xE6000000);
+  static const shadowLight = Color(0x0F000000);
+  static const shadowSoft = Color(0x14000000);
+  static const shadowMedium = Color(0x1A000000);
+
   // ── Semantic ──────────────────────────────────────────────────────────────
-  static const error = primary;
+  static const error = Color(0xFFE53935);
 
   /// Delivery status semantic: in-transit group / waiting confirm order
   static const statusInTransit = Color(0xFF7C3AED);
@@ -88,6 +101,19 @@ class AppColors {
   /// “Chỉ đường” and map CTAs
   static const directionsBlue = Color(0xFF2B7FFF);
 
+  /// Map: shipper + route styling
+  static const mapShipperMarker = Color(0xFF1D4ED8);
+  static const mapPickupLegLine = Color(0xFF1D4ED8);
+  static const mapDeliveryLegLine = Color(0xFFE53935);
+  static const mapStopMarker = Color(0xFFE53935);
+  static const mapPickupMarker = Color(0xFFF59E0B);
+  static const mapStopText = Color(0xFFFFFFFF);
+  static const mapStopTextHalo = Color(0xFF000000);
+  static const mapWarningBackground = Color(0xFFFFECB3);
+  static const mapWarningText = Color(0xFFF57C00);
+  static const mapWarningTextStrong = Color(0xFFEF6C00);
+  static const mapSuccessStrong = Color(0xFF059669);
+
   /// Address / body text on light cards
   static const bodyOnSurface = Color(0xFF495565);
 
@@ -104,7 +130,7 @@ class AppColors {
   static const warningNoticeText = Color(0xFF884A00);
 
   /// Primary button shadow (DesignSystem.mkd)
-  static const primaryButtonShadow = Color(0xFFC94210);
+  static const primaryButtonShadow = Color(0xFF1B5E20);
 
   /// Delivery note default surface
   static const deliveryNoteBackground = Color(0xFFFFFBEB);

@@ -423,9 +423,9 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
 
     await _createCircleMarker(
       point: shipperLocation,
-      fillColor: const Color(0xFF1D4ED8),
+      fillColor: AppColors.mapShipperMarker,
       radius: 7,
-      strokeColor: const Color(0xFFFFFFFF),
+      strokeColor: AppColors.onPrimary,
       strokeWidth: 2,
     );
 
@@ -519,7 +519,7 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
               .map((p) => Point(coordinates: Position(p.longitude, p.latitude)))
               .toList(),
         ),
-        lineColor: const Color(0xFFE53935).toARGB32(),
+        lineColor: AppColors.mapDeliveryLegLine.toARGB32(),
         lineWidth: 4,
         lineOpacity: 0.9,
       ),
@@ -573,7 +573,7 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
               .map((p) => Point(coordinates: Position(p.longitude, p.latitude)))
               .toList(),
         ),
-        lineColor: const Color(0xFF1D4ED8).toARGB32(),
+        lineColor: AppColors.mapPickupLegLine.toARGB32(),
         lineWidth: 4,
         lineOpacity: 0.85,
       ),
@@ -586,9 +586,9 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
           latitude: pickupPoint.latitude,
           longitude: pickupPoint.longitude,
         ),
-        fillColor: const Color(0xFFF59E0B),
+        fillColor: AppColors.mapPickupMarker,
         radius: 8,
-        strokeColor: const Color(0xFFFFFFFF),
+        strokeColor: AppColors.onPrimary,
         strokeWidth: 2,
       );
     }
@@ -623,9 +623,9 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
   }) async {
     await _createCircleMarker(
       point: point,
-      fillColor: const Color(0xFFE53935),
+      fillColor: AppColors.mapStopMarker,
       radius: 9,
-      strokeColor: const Color(0xFFFFFFFF),
+      strokeColor: AppColors.onPrimary,
       strokeWidth: 2,
     );
 
@@ -637,8 +637,8 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
         geometry: Point(coordinates: Position(point.longitude, point.latitude)),
         textField: '$sequenceNumber',
         textSize: 14,
-        textColor: const Color(0xFFFFFFFF).toARGB32(),
-        textHaloColor: const Color(0xFF000000).toARGB32(),
+        textColor: AppColors.mapStopText.toARGB32(),
+        textHaloColor: AppColors.mapStopTextHalo.toARGB32(),
         textHaloWidth: 1.5,
       ),
     );
@@ -1258,7 +1258,7 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
       child: Scaffold(
         appBar: AppBar(
           backgroundColor: Colors.transparent,
-          foregroundColor: Colors.white,
+          foregroundColor: AppColors.onPrimary,
           elevation: 0,
           flexibleSpace: Container(
             decoration: const BoxDecoration(
@@ -1278,7 +1278,7 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
             'Lộ trình giao hàng',
             style: AppTypography.header1.copyWith(
               fontSize: 20,
-              color: Colors.white,
+              color: AppColors.onPrimary,
               letterSpacing: -0.60,
             ),
           ),
@@ -1302,12 +1302,12 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
                 },
                 icon: const Icon(
                   Icons.assignment_outlined,
-                  color: Colors.white,
+                  color: AppColors.onPrimary,
                 ),
                 label: Text(
                   'Nhóm giao',
                   style: AppTypography.bodyRegular1.copyWith(
-                    color: Colors.white,
+                    color: AppColors.onPrimary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -1323,7 +1323,7 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
                 right: 16,
                 top: 16,
                 child: Material(
-                  color: Colors.amber.shade100,
+                  color: AppColors.mapWarningBackground,
                   borderRadius: BorderRadius.circular(12),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
@@ -1355,7 +1355,7 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
             curve: Curves.easeOut,
             height: _controlsExpanded ? 330 : 125,
             decoration: const BoxDecoration(
-              color: Colors.white,
+              color: AppColors.surfaceWhite,
               border: Border(top: BorderSide(color: AppColors.cardBorder)),
             ),
             child: ClipRect(
@@ -1445,7 +1445,7 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
                           fontSize: 11,
                           color: _shipperLocationFallbackReason == null
                               ? AppColors.textSecondary
-                              : Colors.orange.shade700,
+                              : AppColors.mapWarningText,
                         ),
                       ),
                       if (_shipperLocationFallbackReason != null)
@@ -1453,7 +1453,7 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
                           _shipperLocationFallbackReason!,
                           style: AppTypography.bodyRegular1.copyWith(
                             fontSize: 11,
-                            color: Colors.orange.shade700,
+                            color: AppColors.mapWarningText,
                           ),
                         ),
                     ],
@@ -1490,7 +1490,7 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
                           _loadError!,
                           style: AppTypography.bodyRegular1.copyWith(
                             fontSize: 12,
-                            color: Colors.red.shade700,
+                            color: AppColors.error,
                           ),
                         ),
                       ],
@@ -1513,7 +1513,7 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
                           'Không map được ${_countUnresolvedRouteStops()} điểm sang dữ liệu địa chỉ của nhóm.',
                           style: AppTypography.bodyRegular1.copyWith(
                             fontSize: 11,
-                            color: Colors.orange.shade800,
+                            color: AppColors.mapWarningTextStrong,
                           ),
                         ),
                       ],
@@ -1654,14 +1654,14 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
                                     _isGroupComplete()
                                         ? Icons.check_circle
                                         : Icons.play_arrow,
-                                    color: Colors.white,
+                                    color: AppColors.onPrimary,
                                   ),
                                   label: Text(
                                     _isGroupComplete()
                                         ? 'Hoàn thành nhóm giao'
                                         : 'Bắt đầu giao hàng',
                                     style: AppTypography.subHeader.copyWith(
-                                      color: Colors.white,
+                                      color: AppColors.onPrimary,
                                       fontSize: 16,
                                     ),
                                   ),
@@ -1694,7 +1694,7 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
         constraints: const BoxConstraints(maxWidth: 420),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surfaceWhite,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: AppColors.cardBorder),
         ),
@@ -2134,14 +2134,14 @@ class _RouteLegsSummary extends StatelessWidget {
         const SizedBox(height: 8),
         if (pickupLeg != null)
           _LegRow(
-            color: const Color(0xFF1D4ED8),
+            color: AppColors.mapPickupLegLine,
             title: 'Chặng A • Shipper → Siêu thị',
             summary: pickupLeg!.summaryLabel,
           ),
         if (pickupLeg != null && deliveryLeg != null) const SizedBox(height: 6),
         if (deliveryLeg != null)
           _LegRow(
-            color: const Color(0xFFE53935),
+            color: AppColors.mapDeliveryLegLine,
             title: pickedUp
                 ? 'Chặng B • Shipper → Khách'
                 : 'Chặng B • Siêu thị → Khách',
@@ -2157,8 +2157,8 @@ class _RouteLegsSummary extends StatelessWidget {
               label: const Text('Đã lấy hàng - ẩn Chặng A'),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 10),
-                foregroundColor: const Color(0xFF1D4ED8),
-                side: const BorderSide(color: Color(0xFF1D4ED8)),
+                foregroundColor: AppColors.mapPickupLegLine,
+                side: const BorderSide(color: AppColors.mapPickupLegLine),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -2172,7 +2172,7 @@ class _RouteLegsSummary extends StatelessWidget {
               const Icon(
                 Icons.check_circle,
                 size: 16,
-                color: Color(0xFF059669),
+                color: AppColors.mapSuccessStrong,
               ),
               const SizedBox(width: 6),
               Expanded(
@@ -2181,7 +2181,7 @@ class _RouteLegsSummary extends StatelessWidget {
                   style: AppTypography.bodyRegular1.copyWith(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: const Color(0xFF059669),
+                    color: AppColors.mapSuccessStrong,
                   ),
                 ),
               ),
@@ -2293,7 +2293,7 @@ class _RouteOption extends StatelessWidget {
         : AppColors.dividerStrong;
     final bgColor = isActive
         ? AppColors.routeOptionActiveBackground
-        : Colors.white;
+        : AppColors.surfaceWhite;
 
     return Material(
       color: bgColor,

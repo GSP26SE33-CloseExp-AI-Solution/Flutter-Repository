@@ -11,11 +11,11 @@ class AppTheme {
     final colorScheme = ColorScheme(
       brightness: Brightness.light,
       primary: AppColors.primary,
-      onPrimary: Colors.white,
+      onPrimary: AppColors.onPrimary,
       secondary: AppColors.accent,
-      onSecondary: Colors.white,
+      onSecondary: AppColors.onPrimary,
       error: AppColors.error,
-      onError: Colors.white,
+      onError: AppColors.onPrimary,
       surface: AppColors.surfaceWhite,
       onSurface: AppColors.neutralDark,
     );
@@ -48,9 +48,9 @@ class AppTheme {
           ),
           elevation: WidgetStateProperty.all(8),
           shadowColor: WidgetStateProperty.all(
-            const Color(0x1AC94210), // #C94210 @10% opacity
+            AppColors.primaryButtonShadow.withValues(alpha: 0.10),
           ),
-          foregroundColor: WidgetStateProperty.all(Colors.white),
+          foregroundColor: WidgetStateProperty.all(AppColors.onPrimary),
           textStyle: WidgetStateProperty.all(
             AppTypography.header3.copyWith(
               fontSize: 14,
@@ -76,28 +76,28 @@ class AppTheme {
             const BorderSide(color: AppColors.primary),
           ),
           foregroundColor: WidgetStateProperty.all(AppColors.primary),
-          textStyle: WidgetStateProperty.all(
-            AppTypography.subHeader,
-          ),
+          textStyle: WidgetStateProperty.all(AppTypography.subHeader),
           elevation: WidgetStateProperty.all(8),
           shadowColor: WidgetStateProperty.all(
-            const Color(0x1AC94210),
+            AppColors.primaryButtonShadow.withValues(alpha: 0.10),
           ),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.white,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        fillColor: AppColors.surfaceWhite,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
         labelStyle: AppTypography.bodyRegular1.copyWith(
           fontSize: 12,
-          color: const Color(0xFF3C3C3C),
+          color: AppColors.inputLabel,
           height: 1.37,
         ),
         hintStyle: AppTypography.bodyRegular1.copyWith(
           fontSize: 14,
-          color: const Color(0xFFA9ABAE),
+          color: AppColors.inputHint,
           height: 1.37,
         ),
         border: OutlineInputBorder(
@@ -131,4 +131,3 @@ class AppTheme {
     );
   }
 }
-

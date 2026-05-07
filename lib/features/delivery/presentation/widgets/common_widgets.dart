@@ -34,7 +34,7 @@ class GradientAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     return AppBar(
       backgroundColor: Colors.transparent,
-      foregroundColor: Colors.white,
+      foregroundColor: AppColors.onPrimary,
       centerTitle: centerTitle,
       elevation: 0,
       systemOverlayStyle: SystemUiOverlayStyle.light,
@@ -59,14 +59,14 @@ class GradientAppBar extends StatelessWidget implements PreferredSizeWidget {
                   title,
                   style: AppTypography.header1.copyWith(
                     fontSize: 20,
-                    color: Colors.white,
+                    color: AppColors.onPrimary,
                     letterSpacing: -0.60,
                   ),
                 ),
                 Text(
                   subtitle!,
                   style: AppTypography.header3.copyWith(
-                    color: Colors.white.withValues(alpha: 0.9),
+                    color: AppColors.onPrimary.withValues(alpha: 0.9),
                   ),
                 ),
               ],
@@ -75,7 +75,7 @@ class GradientAppBar extends StatelessWidget implements PreferredSizeWidget {
               title,
               style: AppTypography.header1.copyWith(
                 fontSize: 20,
-                color: Colors.white,
+                color: AppColors.onPrimary,
                 letterSpacing: -0.60,
               ),
             ),
@@ -699,7 +699,7 @@ Future<bool?> showDeliveryConfirmDialog({
           onPressed: () => Navigator.pop(dialogContext, true),
           style: FilledButton.styleFrom(
             backgroundColor: resolvedConfirmColor,
-            foregroundColor: Colors.white,
+            foregroundColor: AppColors.onPrimary,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -708,7 +708,7 @@ Future<bool?> showDeliveryConfirmDialog({
           child: Text(
             confirmLabel,
             style: AppTypography.subHeader.copyWith(
-              color: Colors.white,
+              color: AppColors.onPrimary,
               fontWeight: FontWeight.w700,
             ),
           ),
