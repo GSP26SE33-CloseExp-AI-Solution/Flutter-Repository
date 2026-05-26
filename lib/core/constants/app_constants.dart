@@ -1,7 +1,4 @@
-/// App Constants for CloseExp Delivery Staff App
-///
-/// This file contains all application-level constants including
-/// storage keys, app info, and configuration values.
+/// Application-level constants: app info, storage keys, configuration values.
 library;
 
 class AppConstants {

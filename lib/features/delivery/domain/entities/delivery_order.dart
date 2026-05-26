@@ -1,8 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-/// Delivery Order Entity - Domain Layer
-///
-/// Represents an individual order within a delivery group.
+/// Delivery order entity: một đơn trong nhóm giao.
 class DeliveryOrder extends Equatable {
   final String orderId;
 

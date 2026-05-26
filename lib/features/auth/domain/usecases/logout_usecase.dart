@@ -3,9 +3,7 @@ import '../../../../core/error/failures.dart';
 import '../../../../core/usecases/usecase.dart';
 import '../repositories/auth_repository.dart';
 
-/// Logout Use Case - Domain Layer
-///
-/// Handles the business logic for user logout.
+/// Đăng xuất user hiện tại.
 class LogoutUseCase implements UseCase<void, NoParams> {
   final AuthRepository repository;
 

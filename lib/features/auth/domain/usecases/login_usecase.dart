@@ -5,10 +5,7 @@ import '../../../../core/usecases/usecase.dart';
 import '../entities/auth_result.dart';
 import '../repositories/auth_repository.dart';
 
-/// Login Use Case - Domain Layer
-///
-/// Handles the business logic for user authentication.
-/// Validates that only DeliveryStaff users can login to this app.
+/// Đăng nhập; chỉ cho phép role DeliveryStaff.
 class LoginUseCase implements UseCase<AuthResult, LoginParams> {
   final AuthRepository repository;
 

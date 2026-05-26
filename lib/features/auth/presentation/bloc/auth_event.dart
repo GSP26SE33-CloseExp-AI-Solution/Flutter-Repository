@@ -1,8 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-/// Auth Event - Presentation Layer (BLoC)
-///
-/// Events that trigger state changes in AuthBloc.
+/// Auth events kích hoạt thay đổi trạng thái trong AuthBloc.
 abstract class AuthEvent extends Equatable {
   const AuthEvent();
 

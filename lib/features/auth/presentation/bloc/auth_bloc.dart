@@ -9,10 +9,7 @@ import '../../domain/usecases/update_profile_usecase.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
 
-/// Auth BLoC - Presentation Layer
-///
-/// Handles authentication state management using the BLoC pattern.
-/// Connects UI events to domain use cases.
+/// Auth BLoC: quản lý trạng thái đăng nhập, nối UI với use case.
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final LoginUseCase _loginUseCase;
   final LogoutUseCase _logoutUseCase;

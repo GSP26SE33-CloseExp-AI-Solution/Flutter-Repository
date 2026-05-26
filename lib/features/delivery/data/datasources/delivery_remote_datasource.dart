@@ -8,9 +8,7 @@ import '../models/delivery_order_model.dart';
 import '../models/delivery_route_plan_model.dart';
 import '../models/delivery_stats_model.dart';
 
-/// Delivery Remote Data Source - Data Layer
-///
-/// Handles all API calls related to delivery operations.
+/// Delivery remote data source: gọi API giao hàng.
 abstract class DeliveryRemoteDataSource {
   // Delivery Groups
   Future<List<DeliveryGroupSummaryModel>> getAvailableGroups({
@@ -50,8 +48,7 @@ abstract class DeliveryRemoteDataSource {
   });
 
   // Delivery Orders
-  /// Khi có [groupId], BE sẽ scope item theo đúng nhóm → tránh việc đơn đa-siêu-thị
-  /// trả về item thuộc nhóm khác mà shipper cũng đang sở hữu.
+  /// Khi có [groupId], BE scope item đúng nhóm, tránh trả về đơn đa-siêu-thị của nhóm khác.
   Future<DeliveryOrderModel> getOrderDetails(String orderId, {String? groupId});
 
   /// BE: POST multipart `file` → dùng URL trả về cho [confirmDelivery].

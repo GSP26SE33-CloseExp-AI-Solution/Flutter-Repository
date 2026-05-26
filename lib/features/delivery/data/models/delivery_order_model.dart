@@ -1,8 +1,6 @@
 import '../../domain/entities/delivery_order.dart';
 
-/// Delivery Order Model - Data Layer
-///
-/// Handles serialization/deserialization for API communication.
+/// Delivery order model: JSON cho API.
 class DeliveryOrderModel extends DeliveryOrder {
   const DeliveryOrderModel({
     required super.orderId,

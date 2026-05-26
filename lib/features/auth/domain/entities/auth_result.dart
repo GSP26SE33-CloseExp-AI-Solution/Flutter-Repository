@@ -1,10 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'user.dart';
 
-/// Auth Result Entity - Domain Layer
-///
-/// Represents the authentication result containing
-/// tokens and user information.
+/// Auth result entity: token và thông tin user sau đăng nhập.
 class AuthResult extends Equatable {
   final String accessToken;
   final String refreshToken;

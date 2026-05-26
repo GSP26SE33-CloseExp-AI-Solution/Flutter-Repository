@@ -1,9 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-/// Base Failure class for handling errors in Clean Architecture
-///
-/// All specific failure types should extend this class.
-/// Using Equatable for value comparison.
+/// Base Failure chung cho lỗi Clean Architecture, dùng Equatable để so sánh giá trị.
 abstract class Failure extends Equatable {
   final String message;
   final int? statusCode;

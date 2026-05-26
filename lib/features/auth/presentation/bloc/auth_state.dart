@@ -1,8 +1,7 @@
 import 'package:equatable/equatable.dart';
 import '../../domain/entities/user.dart';
 
-/// Auth State - Presentation Layer (BLoC)
-/// Represents the different states of authentication.
+/// Auth states cho luồng authentication trong AuthBloc.
 abstract class AuthState extends Equatable {
   const AuthState();
 

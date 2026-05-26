@@ -19,9 +19,7 @@ import '../../features/notifications/presentation/pages/notifications_page.dart'
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../injection_container.dart';
 
-/// App Router Configuration
-///
-/// Uses GoRouter for declarative routing with authentication-based redirects.
+/// App router dùng GoRouter với redirect dựa trên trạng thái authentication.
 class AppRouter {
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
 

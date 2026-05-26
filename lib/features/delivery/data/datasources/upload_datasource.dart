@@ -3,9 +3,7 @@ import 'package:dio/dio.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/error/exceptions.dart';
 
-/// Upload Data Source - Data Layer
-///
-/// Handles file upload API calls.
+/// Upload data source: gọi API upload file.
 abstract class UploadDataSource {
   /// Upload a file and return the uploaded file URL
   Future<UploadResult> uploadFile(File file);

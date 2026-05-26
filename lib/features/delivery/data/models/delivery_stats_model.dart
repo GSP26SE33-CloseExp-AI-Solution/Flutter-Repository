@@ -1,8 +1,6 @@
 import '../../domain/entities/delivery_stats.dart';
 
-/// Delivery Stats Model - Data Layer  
-///
-/// Handles serialization/deserialization for API communication.
+/// Delivery stats model: JSON cho API.
 class DeliveryStatsModel extends DeliveryStats {
   const DeliveryStatsModel({
     required super.deliveryStaffId,

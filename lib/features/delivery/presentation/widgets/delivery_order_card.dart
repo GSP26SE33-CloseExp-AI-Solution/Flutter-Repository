@@ -45,9 +45,7 @@ class DeliveryOrderCard extends StatelessWidget {
     }).length;
   }
 
-  /// Đơn có item thuộc (các) nhóm giao khác → là đơn đa-nhóm (multi-supermarket).
-  /// Dùng để hiển thị hint giúp shipper hiểu vì sao order status chung chưa đóng
-  /// sổ dù nhóm của họ đã xử lý xong.
+  /// Đơn có item thuộc nhóm giao khác → đa-nhóm; hint giải thích vì sao order status chưa đóng.
   bool _hasItemsInOtherGroups() {
     final groupId = currentGroupId?.trim().toLowerCase();
     if (groupId == null || groupId.isEmpty) return false;
@@ -60,9 +58,7 @@ class DeliveryOrderCard extends StatelessWidget {
     });
   }
 
-  /// Badge "theo nhóm": mô tả tiến độ của riêng nhóm shipper đang phụ trách.
-  /// Khác với [DeliveryOrderStatusBadge] vốn lấy từ Order.Status (BE gộp tất cả
-  /// nhóm/items), badge này chỉ nói về các item thuộc [currentGroupId].
+  /// Badge \"theo nhóm\" mô tả tiến độ riêng nhóm shipper, khác Order.Status gộp nhiều nhóm.
   Widget? _buildGroupScopedBadge({
     required int totalItemsInGroup,
     required int completedCount,

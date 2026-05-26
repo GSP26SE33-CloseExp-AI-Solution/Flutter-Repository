@@ -1,9 +1,7 @@
 import '../../domain/entities/auth_result.dart';
 import 'user_model.dart';
 
-/// Auth Response Model - Data Layer
-///
-/// Handles serialization of the authentication response from API.
+/// Auth response model: serialize/deserialize phản hồi đăng nhập từ API.
 class AuthResponseModel extends AuthResult {
   const AuthResponseModel({
     required super.accessToken,

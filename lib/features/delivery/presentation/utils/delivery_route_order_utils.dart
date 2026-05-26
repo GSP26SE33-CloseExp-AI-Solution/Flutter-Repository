@@ -2,8 +2,7 @@ import '../../domain/entities/delivery_order.dart';
 import '../../domain/repositories/delivery_repository.dart';
 import '../../domain/services/shipper_location_service.dart';
 
-/// Sắp [orders] theo thứ tự điểm dừng trên lộ trình ([routeStopOrderIds]).
-/// Đơn không có trong danh sách được xếp ở cuối, giữ thứ tự gốc tương đối.
+/// Sắp [orders] theo [routeStopOrderIds]; đơn không có trong danh sách được đẩy xuống cuối.
 List<DeliveryOrder> sortDeliveryOrdersByRouteStopIds(
   List<DeliveryOrder> orders,
   List<String>? routeStopOrderIds,
@@ -34,8 +33,7 @@ List<DeliveryOrder> sortDeliveryOrdersByRouteStopIds(
   return out;
 }
 
-/// Gọi BE tính lại route-plan để lấy [DeliveryRoutePlan.orderedOrderIds]
-/// (cùng hướng với route map: GPS → center nhóm → fallback).
+/// Gọi BE tính lại route-plan để lấy [DeliveryRoutePlan.orderedOrderIds] cùng hướng với route map.
 Future<List<String>?> fetchRouteStopOrderIdsForGroup({
   required String groupId,
   required DeliveryRepository repository,

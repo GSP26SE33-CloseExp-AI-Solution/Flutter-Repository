@@ -9,10 +9,7 @@ import '../../domain/entities/delivery_stats.dart';
 import '../../domain/repositories/delivery_repository.dart';
 import '../datasources/delivery_remote_datasource.dart';
 
-/// Delivery Repository Implementation - Data Layer
-///
-/// Implements the DeliveryRepository interface from domain layer.
-/// Handles error conversion and network checks.
+/// Delivery repository impl: chuyển lỗi và kiểm tra mạng.
 class DeliveryRepositoryImpl implements DeliveryRepository {
   final DeliveryRemoteDataSource remoteDataSource;
   final NetworkInfo networkInfo;

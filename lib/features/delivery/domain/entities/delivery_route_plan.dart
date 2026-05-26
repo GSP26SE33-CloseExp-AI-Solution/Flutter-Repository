@@ -29,8 +29,7 @@ class DeliveryRoutePlan {
   String get summaryLabel =>
       '${totalDistanceKm.toStringAsFixed(1)} km • ${totalDurationMinutes.toStringAsFixed(0)} phút';
 
-  /// Preferred polyline for delivery rendering (Leg B) with fallback to the
-  /// legacy top-level [encodedPolyline] for older BE responses.
+  /// Preferred polyline cho Leg B, fallback [encodedPolyline] cũ từ BE.
   String get preferredDeliveryPolyline {
     final leg = deliveryLeg;
     if (leg != null && leg.encodedPolyline.isNotEmpty) {

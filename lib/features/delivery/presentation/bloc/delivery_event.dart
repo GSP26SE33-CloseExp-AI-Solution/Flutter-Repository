@@ -1,8 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-/// Delivery Events - Presentation Layer
-///
-/// Events dispatched to the DeliveryBloc.
+/// Delivery events gửi tới DeliveryBloc.
 abstract class DeliveryEvent extends Equatable {
   const DeliveryEvent();
 
@@ -103,9 +101,7 @@ class LoadGroupDetails extends DeliveryEvent {
 class LoadOrderDetails extends DeliveryEvent {
   final String orderId;
 
-  /// Khi app đang đứng trong context 1 nhóm giao cụ thể (vd. route-map),
-  /// truyền [groupId] để BE scope item theo đúng nhóm → tránh đơn đa-siêu-thị
-  /// trả về item của nhóm khác mà cùng shipper cũng đang sở hữu.
+  /// Trong context nhóm giao cụ thể, truyền [groupId] để BE scope đúng item đa-siêu-thị.
   final String? groupId;
 
   const LoadOrderDetails({required this.orderId, this.groupId});

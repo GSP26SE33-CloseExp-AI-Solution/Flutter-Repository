@@ -4,9 +4,7 @@ import '../../domain/repositories/delivery_repository.dart';
 import 'delivery_event.dart';
 import 'delivery_state.dart';
 
-/// Delivery BLoC - Presentation Layer
-///
-/// Manages delivery feature state and business logic.
+/// Delivery BLoC: quản lý state và logic nghiệp vụ giao hàng.
 class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
   final DeliveryRepository _repository;
 

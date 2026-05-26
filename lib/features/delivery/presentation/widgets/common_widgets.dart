@@ -4,12 +4,11 @@ import 'package:flutter/services.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 
-/// Common reusable widgets for Delivery feature
+/// Common reusable widgets cho Delivery feature.
 
 // ============== GRADIENT APP BAR ==============
 
-/// Reusable gradient AppBar used across all delivery screens.
-/// Implements [PreferredSizeWidget] so it can be used directly as `appBar:`.
+/// Gradient AppBar dùng chung cho các màn Delivery, implement [PreferredSizeWidget].
 class GradientAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final String? subtitle;
@@ -85,8 +84,7 @@ class GradientAppBar extends StatelessWidget implements PreferredSizeWidget {
 
 // ============== GRADIENT BUTTON ==============
 
-/// Full-width primary gradient button — matches Design System primary button spec.
-/// Automatically shows disabled styling when [onPressed] is null.
+/// Nút gradient primary full-width; tự chuyển disabled khi [onPressed] là null.
 class AppGradientButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final Widget child;
@@ -664,9 +662,7 @@ class DeliveryNoteCard extends StatelessWidget {
 
 // ============== CONFIRMATION DIALOG ==============
 
-/// Show confirmation dialog with title, content and actions.
-///
-/// Avoids [AppGradientButton] in [AlertDialog.actions] (overflow on narrow screens).
+/// Hiển thị dialog xác nhận với title, content và actions; tránh dùng [AppGradientButton] trong AlertDialog.
 Future<bool?> showDeliveryConfirmDialog({
   required BuildContext context,
   required String title,

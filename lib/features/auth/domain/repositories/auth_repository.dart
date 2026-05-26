@@ -4,10 +4,7 @@ import '../entities/auth_result.dart';
 import '../entities/user.dart';
 import '../entities/user_image.dart';
 
-/// Auth Repository Interface - Domain Layer
-///
-/// This is the contract for authentication operations.
-/// The implementation is in the data layer.
+/// Auth repository contract; implementation ở data layer.
 abstract class AuthRepository {
   /// Login with email and password
   Future<Either<Failure, AuthResult>> login({

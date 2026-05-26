@@ -64,8 +64,7 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
   bool _loading = false;
   String? _loadError;
 
-  /// Đánh dấu shipper đã lấy hàng tại siêu thị → BE sẽ bỏ Leg A (pickup) và
-  /// FE sẽ không vẽ chấm siêu thị, không hiển thị panel Chặng A.
+  /// Đánh dấu đã pickup để BE bỏ Leg A; FE ẩn chấm siêu thị và panel Chặng A.
   bool _pickedUp = false;
 
   /// Guard to prevent concurrent annotation application (reduce rebuild churn).
@@ -103,8 +102,7 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
     ).hasMatch(id);
   }
 
-  /// Override via `--dart-define=MAPBOX_ANDROID_HOSTING=...` if needed.
-  /// Default [VD] matches mapbox_maps_flutter SDK; [TLHC_VD] can white-screen some GPUs.
+  /// Override via `--dart-define=MAPBOX_ANDROID_HOSTING=...`; mặc định VD giống SDK, TLHC_VD có thể trắng map.
   AndroidPlatformViewHostingMode get _androidHostingMode {
     const raw = String.fromEnvironment(
       'MAPBOX_ANDROID_HOSTING',
@@ -124,8 +122,7 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
     }
   }
 
-  /// Toggle via `--dart-define=MAPBOX_TEXTURE_VIEW=true|false` for device-specific rendering.
-  /// Some devices render blank with TextureView=true under certain hosting modes.
+  /// Bật `--dart-define=MAPBOX_TEXTURE_VIEW=true|false` theo thiết bị; một số GPU trắng map khi true.
   bool get _useTextureView {
     return const bool.fromEnvironment(
       'MAPBOX_TEXTURE_VIEW',
@@ -298,8 +295,7 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
     if (_hasValidGroupId) await _fetchRoutePlanOnly();
   }
 
-  /// Shipper bấm "Đã lấy hàng" → đánh dấu đã pickup và tái tính route-plan
-  /// với [skipPickupLeg] = true để BE bỏ Leg A (pickup) + FE ẩn chấm siêu thị.
+  /// Nút \"Đã lấy hàng\" đánh dấu pickup và gọi route-plan với skipPickupLeg=true để bỏ Leg A.
   Future<void> _onPickedUpPressed() async {
     if (_pickedUp || _loading) return;
     setState(() => _pickedUp = true);
@@ -501,10 +497,8 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
 
     final pickupLegPoints = await _renderPickupLegIfAvailable(plan);
 
-    // When pickup leg đã phủ shipper → siêu thị thì không prepend shipperLocation
-    // vào chặng B nữa, tránh nối đường đỏ thẳng đè lên chặng A xanh. Khi shipper
-    // đã bấm "Đã lấy hàng" (_pickedUp) cũng không prepend, tránh vẽ đoạn thẳng
-    // từ vị trí shipper hiện tại tới siêu thị.
+    // Pickup leg phủ shipper → siêu thị thì không prepend shipperLocation vào chặng B.
+    // Khi shipper đã bấm "Đã lấy hàng" cũng không nối thẳng tới siêu thị nữa.
     final routePointsForDisplay = _buildDisplayRoutePoints(
       shipperLocation: shipperLocation,
       routePoints: routePoints,
@@ -538,9 +532,7 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
     ]);
   }
 
-  /// Render Leg A (shipper -> supermarket) with a distinct style when BE
-  /// responds with the new [DeliveryRoutePlan.pickupLeg] field. Returns the
-  /// decoded leg points so the caller can extend the camera fit bounds.
+  /// Vẽ Leg A (shipper → siêu thị) theo [DeliveryRoutePlan.pickupLeg] và trả về điểm đã decode.
   Future<List<({double latitude, double longitude})>>
   _renderPickupLegIfAvailable(DeliveryRoutePlan plan) async {
     final leg = plan.pickupLeg;
@@ -819,7 +811,7 @@ class _DeliveryRouteMapPageState extends State<DeliveryRouteMapPage> {
     final latDelta = (first.latitude - centerLat).abs();
     final lngDelta = (first.longitude - centerLng).abs();
 
-    // If decoded route starts too far from delivery area, precision is likely mismatched.
+    // Nếu route bắt đầu quá xa tâm nhóm giao, khả năng sai precision tọa độ.
     return latDelta > 1.5 || lngDelta > 1.5;
   }
 

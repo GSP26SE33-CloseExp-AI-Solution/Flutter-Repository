@@ -5,10 +5,7 @@ import '../entities/delivery_order.dart';
 import '../entities/delivery_route_plan.dart';
 import '../entities/delivery_stats.dart';
 
-/// Delivery Repository Interface - Domain Layer
-///
-/// Defines the contract for delivery data operations.
-/// Implementation is in the data layer.
+/// Delivery repository contract; implementation ở data layer.
 abstract class DeliveryRepository {
   // ============== DELIVERY GROUPS ==============
 
@@ -55,10 +52,7 @@ abstract class DeliveryRepository {
   /// Complete a delivery group
   Future<Either<Failure, DeliveryGroup>> completeDeliveryGroup(String groupId);
 
-  /// Tối ưu thứ tự điểm + polyline (BE gọi Mapbox).
-  ///
-  /// [skipPickupLeg]: khi shipper đã lấy hàng, set `true` để BE bỏ Leg A (pickup)
-  /// và chỉ trả về Leg B (siêu thị → khách).
+  /// Tối ưu thứ tự điểm + polyline; skipPickupLeg=true bỏ Leg A sau khi đã lấy hàng.
   Future<Either<Failure, DeliveryRoutePlan>> computeDeliveryRoutePlan(
     String groupId, {
     double? startLatitude,

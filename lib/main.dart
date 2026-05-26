@@ -25,9 +25,7 @@ import 'features/notifications/presentation/bloc/notifications_event.dart';
 import 'features/notifications/presentation/bloc/notifications_state.dart';
 import 'injection_container.dart';
 
-/// DevicePreview wraps the app in ClipRRect / animated layout that breaks Mapbox
-/// AndroidView compositing (white map). Skip on Android and iOS; keep on web;
-/// on desktop use `--dart-define=ENABLE_DEVICE_PREVIEW=true` if needed.
+/// Skip DevicePreview on mobile; breaks Mapbox AndroidView. Web/desktop: enable via dart-define.
 bool get _isMobileNative =>
     !kIsWeb &&
     (defaultTargetPlatform == TargetPlatform.android ||
@@ -165,8 +163,7 @@ class _CloseExpDeliveryAppState extends State<CloseExpDeliveryApp> {
           }
         },
         child: MaterialApp.router(
-          // [DevicePreview.appBuilder] + locale can break Mapbox [MapWidget] surface on
-          // Android/iOS (white/blank frame) even when outer [DevicePreview] is skipped.
+          // DevicePreview.appBuilder/locale có thể làm MapWidget trắng trên Android/iOS.
           locale: _shouldWrapWithDevicePreview
               ? DevicePreview.locale(context)
               : null,

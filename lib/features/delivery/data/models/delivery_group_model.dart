@@ -1,9 +1,7 @@
 import '../../domain/entities/delivery_group.dart';
 import 'delivery_order_model.dart';
 
-/// Delivery Group Model - Data Layer
-///
-/// Handles serialization/deserialization for API communication.
+/// Delivery group model: JSON cho API.
 class DeliveryGroupModel extends DeliveryGroup {
   const DeliveryGroupModel({
     required super.deliveryGroupId,

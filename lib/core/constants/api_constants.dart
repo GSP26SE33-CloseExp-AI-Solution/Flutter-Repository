@@ -1,8 +1,3 @@
-/// API Constants for CloseExp Delivery Staff App
-///
-/// This file contains all API-related constants including base URLs,
-/// endpoints, and timeout configurations.
-/// Vendor / siêu thị / SupermarketStaff (đơn, mã nhân viên) chỉ dùng trên web FE — không bổ sung vào app này.
 library;
 
 import 'dart:io' show Platform;
@@ -19,9 +14,10 @@ class ApiConstants {
     }
 
     if (!kDebugMode) {
-      throw StateError(
-        'Missing API_BASE_URL. Provide it via --dart-define for non-debug builds.',
-      );
+      // throw StateError(
+      //   'Missing API_BASE_URL. Provide it via --dart-define for non-debug builds.',
+      // );
+      return 'https://be-repository.onrender.com/api';
     }
 
     // For web
@@ -35,18 +31,18 @@ class ApiConstants {
       // return 'http://10.159.160.29:5014/api'; // LibraryIP School
       // return 'http://172.31.177.220:5014/api'; // Physical device USB
       // return 'http://10.0.2.2:5014/api'; // Android Emulator
-      return 'https://g9z03vx4-5014.asse.devtunnels.ms/api';
+      return 'https://be-repository.onrender.com/api';
     }
     // For iOS
     if (Platform.isIOS) {
       // return 'http://192.168.1.13:5014/api'; // physical device on same LAN
-      return 'http://localhost:5014/api';
+      return 'https://be-repository.onrender.com/api';
     }
     return 'http://localhost:5014/api';
   }
 
   // Production URL (uncomment when deploying)
-  // static const String baseUrl = 'https://your-production-url.com/api';
+  // static const String baseUrl = 'https://????/api';
 
   // ============== AUTH ENDPOINTS ==============
   static const String login = '/auth/login';

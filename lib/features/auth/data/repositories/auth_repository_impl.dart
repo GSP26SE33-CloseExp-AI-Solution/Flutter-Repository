@@ -11,10 +11,7 @@ import '../datasources/auth_remote_datasource.dart';
 import '../models/auth_response_model.dart';
 import '../models/user_model.dart';
 
-/// Auth Repository Implementation - Data Layer
-///
-/// Implements the AuthRepository interface from domain layer.
-/// Coordinates between remote and local data sources.
+/// Auth repository impl: điều phối remote và local data source.
 class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource _remoteDataSource;
   final AuthLocalDataSource _localDataSource;

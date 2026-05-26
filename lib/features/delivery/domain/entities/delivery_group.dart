@@ -1,10 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'delivery_order.dart';
 
-/// Delivery Group Entity - Domain Layer
-///
-/// Represents a collection of orders assigned to a delivery staff
-/// for a specific time slot and delivery area.
+/// Delivery group: tập đơn giao theo khung giờ và khu vực.
 class DeliveryGroup extends Equatable {
   final String deliveryGroupId;
   final String groupCode;
@@ -98,8 +95,7 @@ class DeliveryGroup extends Equatable {
   ];
 }
 
-/// Delivery Group Status Enum matching backend [DeliveryGroupState]
-/// Backend: Pending, Assigned, InTransit, Completed, Failed
+/// Trạng thái nhóm giao khớp BE DeliveryGroupState.
 enum DeliveryGroupStatus {
   pending,
   assigned,

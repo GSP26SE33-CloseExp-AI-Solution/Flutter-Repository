@@ -1,8 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-/// Delivery Stats Entity - Domain Layer
-///
-/// Represents delivery statistics for the current staff member.
+/// Delivery stats entity: thống kê giao hàng của shipper hiện tại.
 class DeliveryStats extends Equatable {
   final String deliveryStaffId;
   final String deliveryStaffName;

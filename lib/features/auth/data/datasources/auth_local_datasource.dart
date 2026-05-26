@@ -4,10 +4,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/error/exceptions.dart';
 import '../models/user_model.dart';
 
-/// Auth Local Data Source - Data Layer
-///
-/// Handles all local storage operations related to authentication.
-/// Uses flutter_secure_storage for secure token storage.
+/// Auth local data source: lưu token/user bằng flutter_secure_storage.
 abstract class AuthLocalDataSource {
   /// Cache the auth tokens and user data
   Future<void> cacheAuthData({

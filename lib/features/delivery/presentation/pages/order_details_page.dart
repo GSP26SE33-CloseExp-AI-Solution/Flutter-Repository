@@ -68,8 +68,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     );
   }
 
-  /// Nhóm giao gửi kèm confirm/fail — ưu tiên `groupId` từ route (bản đồ),
-  /// fallback `order.deliveryGroupId` từ GET chi tiết.
+  /// Ưu tiên `groupId` từ route (bản đồ), fallback `order.deliveryGroupId` từ chi tiết đơn.
   String? _resolveDeliveryGroupIdForActions(DeliveryOrder order) {
     final routeGid = widget.groupId?.trim();
     if (routeGid != null && routeGid.isNotEmpty) {
@@ -858,9 +857,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     );
   }
 
-  /// Banner giải thích trạng thái của riêng nhóm shipper phụ trách so với
-  /// trạng thái gộp (Order.Status) do BE tính. Giúp shipper không hiểu nhầm
-  /// khi đơn đa siêu thị (đa nhóm) chỉ có một phần thuộc nhóm của mình.
+  /// Banner: trạng thái nhóm shipper so với Order.Status gộp đa siêu thị.
   Widget _buildGroupProgressBanner({
     required int scopedCount,
     required int otherGroupCount,
@@ -976,8 +973,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
   static String _normalizeForVerify(String x) =>
       x.toLowerCase().replaceAll(RegExp(r'\s+'), '');
 
-  /// Chuỗi gửi BE là [order.orderCode] khi payload quét/nhập chứa đúng mã đơn.
-  /// BE chỉ so với [Order.OrderCode], không so với orderId.
+  /// BE chỉ so sánh [order.orderCode] (không so với orderId) khi payload quét/nhập khớp mã đơn.
   String? _verificationCodeFromScan(String scanned, DeliveryOrder order) {
     final s = scanned.trim();
     final code = order.orderCode.trim();

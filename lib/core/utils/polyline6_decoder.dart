@@ -49,8 +49,7 @@ class Polyline6Decoder {
     return points;
   }
 
-  /// Decodes using backend `polylineEncoding` hint.
-  /// Supported hints: polyline6, polyline5, polyline.
+  /// Decode theo `polylineEncoding` từ BE: polyline6, polyline5, polyline.
   static List<({double latitude, double longitude})> decodeByEncoding(
     String encoded,
     String? polylineEncoding,

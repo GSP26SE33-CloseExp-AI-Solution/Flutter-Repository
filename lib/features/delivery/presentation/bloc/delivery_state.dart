@@ -3,9 +3,7 @@ import '../../domain/entities/delivery_group.dart';
 import '../../domain/entities/delivery_order.dart';
 import '../../domain/entities/delivery_stats.dart';
 
-/// Delivery States - Presentation Layer
-///
-/// States emitted by the DeliveryBloc.
+/// Delivery states do DeliveryBloc phát ra.
 abstract class DeliveryState extends Equatable {
   const DeliveryState();
 
@@ -38,8 +36,7 @@ class DeliveryError extends DeliveryState {
   List<Object?> get props => [message];
 }
 
-/// Error state for action failures (shows snackbar only, no full screen)
-/// Used for: accept, start, complete, confirm, report failure
+/// Lỗi thao tác (snackbar): accept, start, complete, confirm, báo thất bại.
 class DeliveryActionError extends DeliveryState {
   final String message;
 

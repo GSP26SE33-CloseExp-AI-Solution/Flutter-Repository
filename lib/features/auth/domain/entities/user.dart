@@ -1,9 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-/// User Entity - Domain Layer
-///
-/// This is the core business entity for User.
-/// It represents the user data that the app works with.
+/// User entity: dữ liệu người dùng ở domain layer.
 class User extends Equatable {
   final String userId;
   final String fullName;

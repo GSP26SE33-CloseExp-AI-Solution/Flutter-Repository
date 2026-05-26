@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
 
-/// App text styles based on provided design system.
-///
-/// Note: assumes fonts "DM Sans" và "Be Vietnam Pro" đã được add vào project.
+/// Text styles theo design system; dùng font DM Sans và Be Vietnam Pro đã add vào project.
 class AppTypography {
   AppTypography._();
 

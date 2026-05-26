@@ -3,9 +3,7 @@ import '../../../../core/error/failures.dart';
 import '../../../../core/usecases/usecase.dart';
 import '../repositories/auth_repository.dart';
 
-/// Check Auth Status Use Case - Domain Layer
-///
-/// Checks if the user is currently logged in with a valid token.
+/// Kiểm tra user đã đăng nhập với token hợp lệ.
 class CheckAuthStatusUseCase implements UseCase<bool, NoParams> {
   final AuthRepository repository;
 

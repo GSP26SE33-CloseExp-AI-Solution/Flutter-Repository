@@ -1,9 +1,6 @@
 import '../../domain/entities/user.dart';
 
-/// User Model - Data Layer
-///
-/// This model handles serialization/deserialization for API communication.
-/// It extends the User entity and adds JSON conversion methods.
+/// User model: JSON cho API, extends entity User.
 class UserModel extends User {
   const UserModel({
     required super.userId,

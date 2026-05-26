@@ -5,10 +5,7 @@ import '../models/auth_response_model.dart';
 import '../models/user_image_model.dart';
 import '../models/user_model.dart';
 
-/// Auth Remote Data Source - Data Layer
-///
-/// Handles all API calls related to authentication.
-/// This is the interface contract.
+/// Auth remote data source: gọi API authentication.
 abstract class AuthRemoteDataSource {
   /// Login with email and password
   Future<AuthResponseModel> login({
