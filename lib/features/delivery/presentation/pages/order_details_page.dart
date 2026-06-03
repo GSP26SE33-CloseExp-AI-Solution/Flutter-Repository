@@ -249,6 +249,15 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
         hasScopedItems &&
         scopedItems.every((item) => _isTerminalGroupItem(item));
     final hasItemsInOtherGroups = currentGroupId != null && otherGroupCount > 0;
+    final scopedFailedCount = _countScopedItemsByDeliveryStatus(scopedItems, {
+      'failed',
+    });
+    final scopedCompletedCount = _countScopedItemsByDeliveryStatus(scopedItems, {
+      'completed',
+    });
+    final scopedWaitConfirmCount = _countScopedItemsByDeliveryStatus(scopedItems, {
+      'deliveredwaitconfirm',
+    });
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
@@ -293,6 +302,9 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                     otherGroupCount: otherGroupCount,
                     allScopedTerminal: allScopedTerminal,
                     hasItemsInOtherGroups: hasItemsInOtherGroups,
+                    failedCount: scopedFailedCount,
+                    completedCount: scopedCompletedCount,
+                    waitConfirmCount: scopedWaitConfirmCount,
                   ),
                 ],
               ],
@@ -863,25 +875,42 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     required int otherGroupCount,
     required bool allScopedTerminal,
     required bool hasItemsInOtherGroups,
+    required int failedCount,
+    required int completedCount,
+    required int waitConfirmCount,
   }) {
     late final IconData icon;
     late final Color color;
     late final String title;
     late final String description;
 
-    if (allScopedTerminal && hasItemsInOtherGroups) {
-      icon = Icons.check_circle_outline;
-      color = AppColors.successGradientEnd;
-      title = 'Nhóm của bạn đã hoàn tất';
-      description =
-          'Đơn còn $otherGroupCount món ở nhóm khác. Trạng thái đơn sẽ '
-          'chốt khi các nhóm còn lại hoàn tất.';
-    } else if (allScopedTerminal) {
-      icon = Icons.check_circle_outline;
-      color = AppColors.successGradientEnd;
-      title = 'Nhóm của bạn đã hoàn tất';
-      description =
-          'Bạn đã xử lý xong $scopedCount/$scopedCount món thuộc nhóm này.';
+    if (allScopedTerminal) {
+      if (failedCount > 0 && completedCount == 0 && waitConfirmCount == 0) {
+        icon = Icons.error_outline;
+        color = AppColors.error;
+        title = 'Nhóm giao thất bại';
+        description =
+            'Bạn đã báo thất bại $failedCount/$scopedCount món thuộc nhóm này.';
+      } else if (failedCount > 0) {
+        icon = Icons.warning_amber_outlined;
+        color = AppColors.accent;
+        title = 'Nhóm đã xử lý xong (có lỗi)';
+        description =
+            'Hoàn tất $scopedCount món; $failedCount món báo giao thất bại.';
+      } else if (hasItemsInOtherGroups) {
+        icon = Icons.check_circle_outline;
+        color = AppColors.successGradientEnd;
+        title = 'Nhóm của bạn đã hoàn tất';
+        description =
+            'Đơn còn $otherGroupCount món ở nhóm khác. Trạng thái đơn sẽ '
+            'chốt khi các nhóm còn lại hoàn tất.';
+      } else {
+        icon = Icons.check_circle_outline;
+        color = AppColors.successGradientEnd;
+        title = 'Nhóm của bạn đã hoàn tất';
+        description =
+            'Bạn đã xử lý xong $scopedCount/$scopedCount món thuộc nhóm này.';
+      }
     } else if (hasItemsInOtherGroups) {
       icon = Icons.inventory_2_outlined;
       color = AppColors.accent;
@@ -1056,6 +1085,19 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     return status == 'completed' ||
         status == 'failed' ||
         status == 'deliveredwaitconfirm';
+  }
+
+  int _countScopedItemsByDeliveryStatus(
+    List<DeliveryOrderItem> items,
+    Set<String> statuses,
+  ) {
+    return items.where((item) {
+      final status = (item.deliveryStatus ?? '')
+          .trim()
+          .toLowerCase()
+          .replaceAll('_', '');
+      return statuses.contains(status);
+    }).length;
   }
 
   Future<void> _openQrScan(DeliveryOrder order) async {

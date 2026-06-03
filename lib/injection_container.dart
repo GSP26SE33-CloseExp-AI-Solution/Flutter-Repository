@@ -2,6 +2,9 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get_it/get_it.dart';
 import '../core/network/dio_client.dart';
 import '../core/network/network_info.dart';
+import '../core/notifications/local_notification_service.dart';
+import '../core/notifications/notification_incoming_tracker.dart';
+import '../core/realtime/notification_realtime_service.dart';
 import '../features/auth/data/datasources/auth_local_datasource.dart';
 import '../features/auth/data/datasources/auth_remote_datasource.dart';
 import '../features/auth/data/repositories/auth_repository_impl.dart';
@@ -59,6 +62,18 @@ Future<void> initializeDependencies() async {
 
   // Dio Client
   sl.registerLazySingleton<DioClient>(() => DioClient(secureStorage: sl()));
+
+  sl.registerLazySingleton<NotificationRealtimeService>(
+    () => NotificationRealtimeService(secureStorage: sl()),
+  );
+
+  sl.registerLazySingleton<LocalNotificationService>(
+    () => LocalNotificationService(),
+  );
+
+  sl.registerLazySingleton<NotificationIncomingTracker>(
+    () => NotificationIncomingTracker(sl()),
+  );
 
   // ============== AUTH FEATURE ==============
 

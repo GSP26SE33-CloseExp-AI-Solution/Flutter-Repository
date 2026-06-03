@@ -69,7 +69,7 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
         LoadMyGroups(
           page: state.currentPage + 1,
           status: _getCurrentStatus(),
-          sortBy: _selectedSortBy,
+          sortBy: _effectiveSortBy,
           currentLatitude: _shipperLocation?.latitude,
           currentLongitude: _shipperLocation?.longitude,
         ),
@@ -84,11 +84,14 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
       case 1:
         return DeliveryGroupStatus.inTransit.toApiString();
       case 2:
-        return DeliveryGroupStatus.completed.toApiString();
+        return ApiConstants.deliveryMyGroupsStatusDone;
       default:
         return null;
     }
   }
+
+  String get _effectiveSortBy =>
+      _isCompletedTab ? ApiConstants.deliveryGroupSortRecentFirst : _selectedSortBy;
 
   bool get _isCompletedTab => _tabController.index == 2;
 
@@ -114,7 +117,7 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
         LoadMyWorkQueue(
           limit: _workQueueLimit,
           status: _getCurrentStatus(),
-          sortBy: _selectedSortBy,
+          sortBy: _effectiveSortBy,
           currentLatitude: _shipperLocation?.latitude,
           currentLongitude: _shipperLocation?.longitude,
           refresh: refresh,
@@ -127,7 +130,7 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
       LoadMyGroups(
         status: _getCurrentStatus(),
         refresh: refresh,
-        sortBy: _selectedSortBy,
+        sortBy: _effectiveSortBy,
         currentLatitude: _shipperLocation?.latitude,
         currentLongitude: _shipperLocation?.longitude,
       ),
@@ -206,7 +209,7 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
             tabs: const [
               Tab(text: 'Tất cả'),
               Tab(text: 'Đang giao'),
-              Tab(text: 'Hoàn thành'),
+              Tab(text: 'Đã xong'),
             ],
           ),
         ),
@@ -412,7 +415,7 @@ class _MyDeliveriesPageState extends State<MyDeliveriesPage>
             title: const Text('Chế độ work queue'),
             subtitle: Text(
               _isCompletedTab
-                  ? 'Tab Hoàn thành luôn dùng phân trang thông thường'
+                  ? 'Tab Đã xong luôn dùng phân trang, sắp xếp mới nhất trước'
                   : 'Bật để lấy top nhóm ưu tiên từ hệ thống',
             ),
             value: _useWorkQueueMode,

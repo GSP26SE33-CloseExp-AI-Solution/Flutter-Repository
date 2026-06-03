@@ -15,6 +15,10 @@ import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:device_preview/device_preview.dart';
 import 'core/constants/mapbox_config.dart';
 import 'core/network/dio_client.dart';
+import 'core/notifications/local_notification_service.dart';
+import 'core/notifications/notification_incoming_tracker.dart';
+import 'core/realtime/notification_realtime_service.dart';
+import 'core/realtime/realtime_notification_payload.dart';
 import 'core/theme/app_theme.dart';
 import 'core/router/app_router.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
@@ -65,6 +69,7 @@ void main() async {
 
   // Initialize dependencies
   await initializeDependencies();
+  await sl<LocalNotificationService>().initialize();
 
   const app = CloseExpDeliveryApp();
   if (_shouldWrapWithDevicePreview) {
@@ -85,8 +90,13 @@ class CloseExpDeliveryApp extends StatefulWidget {
 class _CloseExpDeliveryAppState extends State<CloseExpDeliveryApp> {
   late final AuthBloc _authBloc;
   late final NotificationsBloc _notificationsBloc;
+  late final NotificationRealtimeService _notificationRealtimeService;
+  late final LocalNotificationService _localNotificationService;
+  late final NotificationIncomingTracker _notificationIncomingTracker;
   late final GoRouter router;
   int _lastInvalidationTick = 0;
+  String? _lastLocalNotificationId;
+  DateTime? _lastLocalNotificationAt;
   StreamSubscription<AuthState>? _authStateSubscription;
   Timer? _notificationPollingTimer;
 
@@ -95,7 +105,17 @@ class _CloseExpDeliveryAppState extends State<CloseExpDeliveryApp> {
     super.initState();
     _authBloc = sl<AuthBloc>();
     _notificationsBloc = sl<NotificationsBloc>();
+    _notificationRealtimeService = sl<NotificationRealtimeService>();
+    _localNotificationService = sl<LocalNotificationService>();
+    _notificationIncomingTracker = sl<NotificationIncomingTracker>();
     router = AppRouter.createRouter(_authBloc);
+
+    _localNotificationService.onNotificationTap = (_) {
+      router.go(Routes.notifications);
+    };
+    _notificationRealtimeService.onNotificationReceived =
+        _handleRealtimeNotification;
+
     DioClient.authSessionInvalidated.addListener(_onSessionInvalidated);
 
     _authStateSubscription = _authBloc.stream.listen(_handleAuthStateChange);
@@ -116,18 +136,66 @@ class _CloseExpDeliveryAppState extends State<CloseExpDeliveryApp> {
     _authBloc.add(const SessionExpiredEvent());
   }
 
+  void _handleRealtimeNotification(RealtimeNotificationPayload? payload) {
+    if (mounted) {
+      _notificationsBloc.add(const LoadMyNotifications(forceRefresh: true));
+    }
+
+    final effectivePayload =
+        payload ??
+        const RealtimeNotificationPayload(
+          notificationId: 'generic',
+          title: 'Thông báo mới',
+          content: 'Bạn có cập nhật mới',
+        );
+
+    final now = DateTime.now();
+    if (_lastLocalNotificationId == effectivePayload.notificationId &&
+        _lastLocalNotificationAt != null &&
+        now.difference(_lastLocalNotificationAt!) <
+            const Duration(seconds: 5)) {
+      return;
+    }
+
+    _lastLocalNotificationId = effectivePayload.notificationId;
+    _lastLocalNotificationAt = now;
+
+    unawaited(
+      _localNotificationService.showFromRealtime(
+        notificationId: effectivePayload.notificationId,
+        title: effectivePayload.title,
+        body: effectivePayload.content,
+      ),
+    );
+  }
+
+  void _onNotificationsStateChanged(NotificationsState state) {
+    if (state is NotificationsSessionExpired) {
+      _authBloc.add(const SessionExpiredEvent());
+      return;
+    }
+
+    if (state is NotificationsListLoaded) {
+      unawaited(_notificationIncomingTracker.onListLoaded(state.allItems));
+    }
+  }
+
   void _handleAuthStateChange(AuthState state) {
     if (state is AuthAuthenticated) {
       _notificationsBloc.add(const LoadMyNotifications(forceRefresh: true));
+      unawaited(_localNotificationService.ensurePermissions());
       _startNotificationPolling();
+      unawaited(_notificationRealtimeService.connect());
     } else {
       _stopNotificationPolling();
+      _notificationIncomingTracker.reset();
+      unawaited(_notificationRealtimeService.disconnect());
     }
   }
 
   void _startNotificationPolling() {
     _notificationPollingTimer?.cancel();
-    _notificationPollingTimer = Timer.periodic(const Duration(seconds: 45), (
+    _notificationPollingTimer = Timer.periodic(const Duration(seconds: 5), (
       _,
     ) {
       _notificationsBloc.add(const LoadMyNotifications());
@@ -144,6 +212,7 @@ class _CloseExpDeliveryAppState extends State<CloseExpDeliveryApp> {
     DioClient.authSessionInvalidated.removeListener(_onSessionInvalidated);
     _authStateSubscription?.cancel();
     _stopNotificationPolling();
+    unawaited(_notificationRealtimeService.disconnect());
     _notificationsBloc.close();
     _authBloc.close();
     super.dispose();
@@ -157,11 +226,7 @@ class _CloseExpDeliveryAppState extends State<CloseExpDeliveryApp> {
         BlocProvider<NotificationsBloc>.value(value: _notificationsBloc),
       ],
       child: BlocListener<NotificationsBloc, NotificationsState>(
-        listener: (context, state) {
-          if (state is NotificationsSessionExpired) {
-            _authBloc.add(const SessionExpiredEvent());
-          }
-        },
+        listener: (context, state) => _onNotificationsStateChanged(state),
         child: MaterialApp.router(
           // DevicePreview.appBuilder/locale có thể làm MapWidget trắng trên Android/iOS.
           locale: _shouldWrapWithDevicePreview
