@@ -31,7 +31,7 @@ class ApiConstants {
       // return 'http://10.159.160.29:5014/api'; // LibraryIP School
       // return 'http://172.31.177.220:5014/api'; // Physical device USB
       // return 'http://10.0.2.2:5014/api'; // Android Emulator
-      return 'https://be-repository.onrender.com/api';
+      return 'https://g9z03vx4-5014.asse.devtunnels.ms/api';
     }
     // For iOS
     if (Platform.isIOS) {
@@ -91,14 +91,26 @@ class ApiConstants {
   static const String deliveryHistory = '/delivery/history';
   static const String deliveryStats = '/delivery/stats';
 
-  /// Query `status` cho GET /delivery/groups/my — khớp chuỗi trạng thái nhóm trên BE (vd. InTransit).
+  /// Query `status` cho GET /delivery/groups/my
   static const String deliveryMyGroupsStatusActive = 'InTransit';
   static const String deliveryMyGroupsStatusCompleted = 'Completed';
+  static const String deliveryMyGroupsStatusDone = 'Done';
 
   /// Sort modes for GET /delivery/groups/my and /delivery/groups/my/work-queue
   static const String deliveryGroupSortBalanced = 'balanced';
   static const String deliveryGroupSortTimeFirst = 'timeFirst';
   static const String deliveryGroupSortDistanceFirst = 'distanceFirst';
+  static const String deliveryGroupSortRecentFirst = 'recentFirst';
+
+  /// SignalR hub for realtime notifications (no /api prefix).
+  static String get notificationsHubUrl {
+    final api = baseUrl;
+    if (api.endsWith('/api')) {
+      return '${api.substring(0, api.length - 4)}/hubs/notifications';
+    }
+    final uri = Uri.parse(api);
+    return '${uri.scheme}://${uri.host}${uri.hasPort ? ':${uri.port}' : ''}/hubs/notifications';
+  }
 
   // ============== UPLOAD ENDPOINTS ==============
   static const String upload = '/upload';
